@@ -5,12 +5,14 @@ A comprehensive web-based management system for handling registrants in the Chay
 ## Features
 
 ### 🎯 Core Functionality
+
 - **CRUD Operations**: Complete Create, Read, Update, Delete functionality for registrants
 - **Immediate Persistence**: All changes are saved instantly to `registrants.json`
 - **Auto-generated IDs**: Registration IDs are automatically generated based on group and gender
 - **Live Verification Links**: Direct links to verification pages for each registrant
 
 ### 📊 Smart Organization
+
 - **Group Classification**: Registrants organized by subject groups:
   - 🎨 **Arts (AR)** - Creative and liberal arts students
   - 🔬 **Science (SC)** - Science and technology students  
@@ -19,7 +21,8 @@ A comprehensive web-based management system for handling registrants in the Chay
 - **Statistics Dashboard**: Real-time stats showing totals, payments, and active/revoked counts
 
 ### 🎨 Intuitive Design
-- **Visual Cues**: 
+
+- **Visual Cues**:
   - Colored dots for gender identification (🔵 Male, 🟣 Female)
   - Group emojis for quick recognition
   - Status indicators for revoked registrations
@@ -27,6 +30,7 @@ A comprehensive web-based management system for handling registrants in the Chay
 - **Beautiful UI**: Modern design using Tailwind CSS with smooth animations
 
 ### 🛡️ Robust Features
+
 - **Form Validation**: Comprehensive client-side and server-side validation
 - **Error Handling**: Graceful error handling with user-friendly messages
 - **Confirmation Dialogs**: Safety confirmations for destructive actions
@@ -35,6 +39,7 @@ A comprehensive web-based management system for handling registrants in the Chay
 ## Quick Start
 
 ### Installation
+
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -44,12 +49,13 @@ python app.py
 ```
 
 ### Access
+
 - Open your browser to `http://localhost:5000`
 - Start managing registrants immediately!
 
 ## File Structure
 
-```
+```text
 ├── app.py                          # Main Flask application
 ├── requirements.txt                # Python dependencies
 ├── registrants.json               # Data storage (auto-managed)
@@ -63,6 +69,7 @@ python app.py
 ## Usage
 
 ### Adding Registrants
+
 1. Click "Add Registrant" in the navigation
 2. Fill out the comprehensive form with:
 
