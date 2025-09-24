@@ -35,7 +35,6 @@ class App {
 
         // Navigation
         document.getElementById('add-registrant-btn').addEventListener('click', () => this.showAddRegistrantForm());
-        document.getElementById('sync-github-btn').addEventListener('click', () => this.syncWithGitHub());
         document.getElementById('settings-btn').addEventListener('click', () => this.showSettings());
 
         // Close modal when clicking outside
@@ -155,14 +154,18 @@ class App {
             const groupInfo = CONFIG.GROUP_INFO[groupCode];
             if (!groupInfo) continue;
 
+            // Calculate total registrants in this group
+            const totalInGroup = Object.values(genders).reduce((sum, registrants) => sum + registrants.length, 0);
+
             const groupElement = document.createElement('div');
-            groupElement.className = 'bg-white rounded-lg shadow overflow-hidden';
+            groupElement.className = 'bg-white rounded-lg shadow overflow-hidden mb-8';
             
             let groupHTML = `
-                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                    <h2 class="text-lg font-medium text-gray-900 flex items-center">
-                        <span class="mr-2">${groupInfo.emoji}</span>
-                        ${groupInfo.name} (${groupCode})
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                        <span class="text-2xl mr-3">${groupInfo.emoji}</span>
+                        ${groupInfo.name}
+                        <span class="ml-2 text-sm font-normal text-gray-500">(${totalInGroup} registrants)</span>
                     </h2>
                 </div>
             `;
@@ -172,12 +175,13 @@ class App {
                 if (!genderInfo) continue;
 
                 groupHTML += `
-                    <div class="px-6 py-4">
-                        <h3 class="text-md font-medium text-gray-800 mb-4 flex items-center">
+                    <div class="px-6 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-medium text-gray-800 mb-4 flex items-center">
                             <span class="gender-dot ${gender.toLowerCase()}-dot"></span>
-                            ${gender} (${registrants.length})
+                            ${gender}
+                            <span class="ml-2 text-sm font-normal text-gray-500">(${registrants.length})</span>
                         </h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 `;
 
                 for (const registrant of registrants) {
@@ -185,38 +189,77 @@ class App {
                     const isRevoked = registrant.revoked;
                     
                     groupHTML += `
-                        <div class="bg-gray-50 rounded-lg p-4 ${isRevoked ? 'opacity-60' : ''}">
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow ${isRevoked ? 'bg-red-50 border-red-200' : ''}">
                             <div class="flex items-start justify-between">
-                                <div class="flex-1 min-w-0">
-                                    <h4 class="text-sm font-medium text-gray-900 truncate">
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-gray-900 ${isRevoked ? 'line-through text-red-600' : ''}">
                                         ${registrant.name}
-                                        ${isRevoked ? '<span class="text-red-500 text-xs ml-1">(Revoked)</span>' : ''}
                                     </h4>
+                                    <p class="text-sm text-gray-600">${registrant.roll}</p>
+                                    <p class="text-xs font-mono text-gray-500 mt-1">${registrant.registration_id}</p>
+                                    
+                                    ${registrant.email ? `
                                     <p class="text-xs text-gray-500 mt-1">
-                                        ID: ${registrant.registration_id}
-                                    </p>
+                                        <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                        </svg>
+                                        ${registrant.email}
+                                    </p>` : ''}
+                                    
+                                    ${registrant.phone ? `
                                     <p class="text-xs text-gray-500">
-                                        Roll: ${registrant.roll}
-                                    </p>
-                                    ${registrant.paid ? `<p class="text-xs text-green-600 font-medium">Paid: ৳${registrant.paid}</p>` : ''}
+                                        <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                        </svg>
+                                        ${registrant.phone}
+                                    </p>` : ''}
+
+                                    ${registrant.paid ? `
+                                    <p class="text-xs text-green-600 font-medium mt-1">
+                                        💰 Paid: ৳${registrant.paid}
+                                    </p>` : ''}
+
+                                    ${registrant.tshirt_size ? `
+                                    <p class="text-xs text-gray-700 mt-1">
+                                        👕 Size: <span class="font-medium">${registrant.tshirt_size}</span>
+                                    </p>` : ''}
+
+                                    ${isRevoked ? `
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-2">
+                                        🚫 Revoked
+                                    </span>` : ''}
                                 </div>
-                                <div class="flex-shrink-0 ml-2">
-                                    <div class="flex items-center space-x-1">
-                                        <button onclick="window.app.editRegistrant('${registrant.registration_id}')" 
-                                                class="text-blue-600 hover:text-blue-800 text-xs">
-                                            Edit
-                                        </button>
-                                        <span class="text-gray-300">|</span>
-                                        <a href="${verificationUrl}" target="_blank" 
-                                           class="text-emerald-600 hover:text-emerald-800 text-xs">
-                                            View
-                                        </a>
-                                        <span class="text-gray-300">|</span>
-                                        <button onclick="window.app.deleteRegistrant('${registrant.registration_id}')" 
-                                                class="text-red-600 hover:text-red-800 text-xs">
-                                            Delete
-                                        </button>
-                                    </div>
+
+                                <div class="ml-4 flex flex-col space-y-1">
+                                    <!-- Verification Link -->
+                                    <a href="${verificationUrl}" 
+                                       target="_blank" 
+                                       rel="noopener noreferrer"
+                                       class="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                                       title="View verification page">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                        </svg>
+                                        View
+                                    </a>
+
+                                    <!-- Edit Link -->
+                                    <button onclick="window.app.editRegistrant('${registrant.registration_id}')" 
+                                            class="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                        Edit
+                                    </button>
+
+                                    <!-- Delete Button -->
+                                    <button onclick="window.app.deleteRegistrant('${registrant.registration_id}')" 
+                                            class="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                        Delete
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -231,28 +274,6 @@ class App {
 
             groupElement.innerHTML = groupHTML;
             container.appendChild(groupElement);
-        }
-    }
-
-    async syncWithGitHub() {
-        const syncBtn = document.getElementById('sync-github-btn');
-        const syncText = document.getElementById('sync-text');
-        
-        try {
-            syncBtn.disabled = true;
-            syncText.textContent = 'Syncing...';
-            
-            // Force refresh from GitHub
-            await this.dataManager.loadRegistrants(true);
-            this.renderDashboard();
-            
-            UIUtils.showFlashMessage('Successfully synced with GitHub!', 'success');
-        } catch (error) {
-            console.error('Sync error:', error);
-            UIUtils.showFlashMessage('Sync failed: ' + error.message, 'error');
-        } finally {
-            syncBtn.disabled = false;
-            syncText.textContent = 'Sync';
         }
     }
 
