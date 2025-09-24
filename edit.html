@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Registrant - Chayannito 26 Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-font-smoothing: antialiased; 
+            -moz-osx-font-smoothing: grayscale; 
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .loading-spinner {
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #10b981;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-gray-900">
+                        <span class="text-emerald-600">Chayannito 26</span> 
+                        <span class="text-gray-600">Management</span>
+                    </h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" 
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div id="flash-messages" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <!-- Messages will be dynamically inserted here -->
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="flex items-center justify-center py-12">
+        <div class="loading-spinner"></div>
+        <span class="ml-2 text-gray-600">Loading registrant data...</span>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style="display: none;">
+        <div class="fade-in">
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-medium text-gray-900">Edit Registrant</h2>
+                            <p class="mt-1 text-sm text-gray-600">Update the information for this registrant.</p>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <a id="verification-link" href="#" target="_blank" 
+                               class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                                View Verification
+                            </a>
+                            <button id="toggle-revoked-btn" type="button"
+                                    class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <span id="revoked-text">Toggle Status</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="edit-registrant-form" class="px-6 py-4 space-y-6">
+                    <!-- Basic Information -->
+                    <div>
+                        <h3 class="text-md font-medium text-gray-900 mb-4">Basic Information</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Name -->
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700">
+                                    Full Name <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" name="name" id="name" required
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                            </div>
+
+                            <!-- Roll Number -->
+                            <div>
+                                <label for="roll" class="block text-sm font-medium text-gray-700">
+                                    Roll Number <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" name="roll" id="roll" required
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                                <div id="student-status" class="mt-1 text-xs text-center"></div>
+                            </div>
+
+                            <!-- Gender -->
+                            <div>
+                                <label for="gender" class="block text-sm font-medium text-gray-700">
+                                    Gender <span class="text-red-500">*</span>
+                                </label>
+                                <select name="gender" id="gender" required
+                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+
+                            <!-- Registration ID (read-only) -->
+                            <div>
+                                <label for="registration_id" class="block text-sm font-medium text-gray-700">
+                                    Registration ID
+                                </label>
+                                <input type="text" name="registration_id" id="registration_id" readonly
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 sm:text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div>
+                        <h3 class="text-md font-medium text-gray-900 mb-4">Contact Information</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Email -->
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700">
+                                    Email Address
+                                </label>
+                                <input type="email" name="email" id="email"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                            </div>
+
+                            <!-- Phone -->
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-gray-700">
+                                    Phone Number
+                                </label>
+                                <input type="tel" name="phone" id="phone"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment and Referral -->
+                    <div>
+                        <h3 class="text-md font-medium text-gray-900 mb-4">Payment & Referral</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Payment Amount -->
+                            <div>
+                                <label for="paid" class="block text-sm font-medium text-gray-700">
+                                    Payment Amount (৳)
+                                </label>
+                                <input type="number" name="paid" id="paid" min="0"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                            </div>
+
+                            <!-- Referred By -->
+                            <div>
+                                <label for="referred_by" class="block text-sm font-medium text-gray-700">
+                                    Referred By
+                                </label>
+                                <input type="text" name="referred_by" id="referred_by"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                       placeholder="Registration ID or name">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Photo URL -->
+                    <div>
+                        <label for="photo" class="block text-sm font-medium text-gray-700">
+                            Photo URL
+                        </label>
+                        <input type="url" name="photo" id="photo"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                               placeholder="https://example.com/photo.jpg">
+                    </div>
+
+                    <!-- Parts Available -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Parts Available
+                        </label>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="flex items-center">
+                                <input type="checkbox" name="parts_available" id="part_tshirt" value="T-Shirt"
+                                       class="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded">
+                                <label for="part_tshirt" class="ml-2 text-sm text-gray-700">
+                                    T-Shirt
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="parts_available" id="part_food" value="Food"
+                                       class="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded">
+                                <label for="part_food" class="ml-2 text-sm text-gray-700">
+                                    Food
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="parts_available" id="part_gift" value="Gift"
+                                       class="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded">
+                                <label for="part_gift" class="ml-2 text-sm text-gray-700">
+                                    Gift
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- T-shirt Size -->
+                    <div id="tshirt-size-container">
+                        <label for="tshirt_size" class="block text-sm font-medium text-gray-700">
+                            T-Shirt Size
+                        </label>
+                        <select name="tshirt_size" id="tshirt_size"
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                            <option value="">Select Size</option>
+                            <option value="XS">XS</option>
+                            <option value="S">S</option>
+                            <option value="M">M</option>
+                            <option value="L">L</option>
+                            <option value="XL">XL</option>
+                            <option value="XXL">XXL</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Shown only when T-Shirt is selected above.</p>
+                    </div>
+
+                    <!-- Registration Date -->
+                    <div>
+                        <label for="registration_date" class="block text-sm font-medium text-gray-700">
+                            Registration Date
+                        </label>
+                        <input type="date" name="registration_date" id="registration_date"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                        <a href="index.html" 
+                           class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            Cancel
+                        </a>
+                        
+                        <button type="submit" id="submit-btn"
+                                class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Update Registrant
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- JavaScript modules -->
+    <script type="module" src="js/config.js"></script>
+    <script type="module" src="js/github-api.js"></script>
+    <script type="module" src="js/ui-utils.js"></script>
+    <script type="module" src="js/data-manager.js"></script>
+    <script type="module" src="js/edit-registrant.js"></script>
+</body>
+</html>
