@@ -129,4 +129,85 @@ export class GitHubAPI {
         const endpoint = `/repos/${this.owner}/${this.repo}`;
         return await this.makeRequest(endpoint);
     }
+
+    // Load revenues from income repository
+    async loadRevenues() {
+        try {
+            const endpoint = `/repos/${CONFIG.INCOME.OWNER}/${CONFIG.INCOME.REPO}/contents/${CONFIG.INCOME.FILE_PATH}`;
+            const response = await this.makeRequest(endpoint);
+            
+            // Decode base64 content
+            const content = atob(response.content);
+            const revenues = JSON.parse(content);
+            
+            return {
+                data: revenues,
+                sha: response.sha
+            };
+        } catch (error) {
+            if (error.message.includes('404')) {
+                // File doesn't exist yet, return empty array
+                return {
+                    data: [],
+                    sha: null
+                };
+            }
+            throw error;
+        }
+    }
+
+    // Update the revenues.json file in income repository
+    async updateRevenuesFile(revenues, sha = null) {
+        const endpoint = `/repos/${CONFIG.INCOME.OWNER}/${CONFIG.INCOME.REPO}/contents/${CONFIG.INCOME.FILE_PATH}`;
+        
+        // Convert data to base64
+        const content = btoa(JSON.stringify(revenues, null, 2));
+        
+        const body = {
+            message: `Add revenue entry via web UI - ${new Date().toISOString()}`,
+            content: content
+        };
+
+        // If we have a SHA (file exists), include it for update
+        if (sha) {
+            body.sha = sha;
+        }
+
+        return await this.makeRequest(endpoint, {
+            method: 'PUT',
+            body: JSON.stringify(body)
+        });
+    }
+
+    // Add a revenue entry
+    async addRevenueEntry(name, group, gender, registrationDate) {
+        try {
+            // Load existing revenues
+            const { data: revenues, sha } = await this.loadRevenues();
+            
+            // Get client name based on group and gender
+            const clientName = CONFIG.CLIENT_MAPPINGS[group]?.[gender] || 'Unknown Client';
+            
+            // Create revenue entry
+            const revenueEntry = {
+                id: Date.now(), // timestamp in milliseconds
+                source: "Registration Fee",
+                amount: 1200,
+                date: registrationDate,
+                type: "Registration",
+                clients: [clientName],
+                comments: name
+            };
+            
+            revenues.push(revenueEntry);
+            
+            // Update the file
+            await this.updateRevenuesFile(revenues, sha);
+            
+            return true;
+        } catch (error) {
+            console.error('Error adding revenue entry:', error);
+            throw error;
+        }
+    }
 }
