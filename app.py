@@ -20,6 +20,7 @@ app.secret_key = 'chayannito26-management-ui-secret-key'
 
 # Configuration
 REGISTRANTS_FILE = Path(__file__).parent.parent / 'verify' / 'registrants.json'
+REVENUES_FILE = Path(__file__).parent.parent / 'income' / 'revenues.json'
 VERIFICATION_BASE_URL = 'https://chayannito26.github.io/verify'
 
 # Group and gender mappings
@@ -36,6 +37,22 @@ GENDER_INFO = {
 
 # T-shirt size options (keep consistent across UI)
 TSHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+
+# Client mappings for revenue tracking
+CLIENT_MAPPINGS = {
+    'SC': {  # Science
+        'Male': 'Arian Mollik Wasi',
+        'Female': 'Marzia Mittika'
+    },
+    'AR': {  # Arts
+        'Male': 'Sahariar Nafiz',
+        'Female': 'Nafiza Tanzim Hafsa'
+    },
+    'CO': {  # Commerce
+        'Male': 'Tanvir Hossain Chowdhury',
+        'Female': 'Mehbuba'
+    }
+}
 
 def load_registrants():
     """Load registrants from JSON file."""
@@ -56,6 +73,99 @@ def save_registrants(registrants):
         return True
     except Exception as e:
         flash(f'Error saving registrants: {str(e)}', 'error')
+        return False
+
+def load_revenues():
+    """Load revenues from JSON file."""
+    try:
+        with open(REVENUES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
+    except json.JSONDecodeError:
+        print('Error reading revenues file. Using empty list.')
+        return []
+
+def save_revenues(revenues):
+    """Save revenues to JSON file."""
+    try:
+        with open(REVENUES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(revenues, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f'Error saving revenues: {str(e)}')
+        return False
+
+def add_revenue_entry(name, group, gender, registration_date):
+    """Add a revenue entry for a new registration."""
+    try:
+        revenues = load_revenues()
+        
+        # Get client name based on group and gender
+        client_name = CLIENT_MAPPINGS.get(group, {}).get(gender, 'Unknown Client')
+        
+        # Create revenue entry
+        revenue_entry = {
+            "id": int(datetime.now().timestamp() * 1000),  # timestamp in milliseconds
+            "source": "Registration Fee",
+            "amount": 1200,
+            "date": registration_date,
+            "type": "Registration",
+            "clients": [client_name],
+            "comments": name
+        }
+        
+        revenues.append(revenue_entry)
+        
+        if save_revenues(revenues):
+            print(f'Revenue entry added for {name}')
+            return True
+        else:
+            print(f'Failed to save revenue entry for {name}')
+            return False
+            
+    except Exception as e:
+        print(f'Error adding revenue entry: {str(e)}')
+        return False
+
+def push_income_repo():
+    """Push changes to the income repository."""
+    try:
+        income_dir = Path(__file__).parent.parent / 'income'
+        
+        def run_cmd(cmd):
+            try:
+                if isinstance(cmd, str):
+                    completed = subprocess.run(cmd, cwd=income_dir, shell=True, capture_output=True, text=True)
+                else:
+                    completed = subprocess.run(cmd, cwd=income_dir, capture_output=True, text=True)
+                return {
+                    'returncode': completed.returncode,
+                    'stdout': completed.stdout.strip(),
+                    'stderr': completed.stderr.strip()
+                }
+            except Exception as e:
+                return {'returncode': 1, 'stdout': '', 'stderr': str(e)}
+        
+        # Initialize git if not already done
+        init_res = run_cmd(['git', 'init'])
+        
+        # Add all files
+        add_res = run_cmd(['git', 'add', '.'])
+        
+        # Commit
+        commit_message = f"Add revenue entry @ {datetime.now().isoformat()}"
+        commit_res = run_cmd(['git', 'commit', '-m', commit_message])
+        
+        # Push (assuming remote is set up)
+        push_res = run_cmd(['git', 'push'])
+        
+        print(f'Git operations completed: add={add_res["returncode"]}, commit={commit_res["returncode"]}, push={push_res["returncode"]}')
+        
+        return commit_res['returncode'] == 0 or 'nothing to commit' in commit_res['stdout']
+        
+    except Exception as e:
+        print(f'Error pushing to income repo: {str(e)}')
         return False
 
 def id_to_filename(reg_id):
@@ -217,11 +327,16 @@ def add_registrant():
             tshirt_size = ''
 
         # Create new registrant
+        registration_date_obj = datetime.now()
+        registration_date_str = registration_date_obj.strftime('%d %B %Y')
+        registration_date_iso = registration_date_obj.strftime('%Y-%m-%d')
+        
         new_registrant = {
             'name': name,
             'roll': roll,
             'gender': gender,
-            'registration_date': datetime.now().strftime('%d %B %Y'),
+            'group': group,  # Add group to registrant data
+            'registration_date': registration_date_str,
             'registration_id': registration_id,
             'photo': '',
             'revoked': False,
@@ -236,6 +351,12 @@ def add_registrant():
         registrants.append(new_registrant)
         
         if save_registrants(registrants):
+            # Add revenue entry
+            add_revenue_entry(name, group, gender, registration_date_iso)
+            
+            # Push changes to income repository
+            push_income_repo()
+            
             flash(f'Successfully added {name} with ID {registration_id}!', 'success')
             return redirect(url_for('index'))
         else:

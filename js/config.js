@@ -8,6 +8,14 @@ export const CONFIG = {
         API_BASE: 'https://api.github.com'
     },
     
+    // Income repository information
+    INCOME: {
+        OWNER: 'chayannito26',
+        REPO: 'income',
+        FILE_PATH: 'revenues.json',
+        API_BASE: 'https://api.github.com'
+    },
+    
     // Verification system
     VERIFICATION_BASE_URL: 'https://chayannito26.github.io/verify',
     
@@ -31,6 +39,22 @@ export const CONFIG = {
     GENDER_INFO: {
         'Male': { short: 'B', color: 'blue', dot: '🔵' },
         'Female': { short: 'G', color: 'pink', dot: '🟣' }
+    },
+    
+    // Client mappings for revenue tracking
+    CLIENT_MAPPINGS: {
+        'SC': {  // Science
+            'Male': 'Arian Mollik Wasi',
+            'Female': 'Marzia Mittika'
+        },
+        'AR': {  // Arts
+            'Male': 'Sahariar Nafiz',
+            'Female': 'Nafiza Tanzim Hafsa'
+        },
+        'CO': {  // Commerce
+            'Male': 'Tanvir Hossain Chowdhury',
+            'Female': 'Mehbuba'
+        }
     },
     
     // T-shirt size options

@@ -102,11 +102,14 @@ export class DataManager {
             }
 
             // Set default values
+            const registrationDate = registrantData.registration_date || new Date().toISOString().split('T')[0];
+            
             const newRegistrant = {
                 name: registrantData.name,
                 roll: registrantData.roll,
                 gender: registrantData.gender,
-                registration_date: registrantData.registration_date || new Date().toLocaleDateString('en-GB'),
+                group: registrantData.group,  // Add group to registrant data
+                registration_date: new Date(registrationDate).toLocaleDateString('en-GB'),
                 registration_id: registrantData.registration_id,
                 photo: registrantData.photo || '',
                 revoked: false,
@@ -123,6 +126,19 @@ export class DataManager {
 
             // Save to GitHub
             await this.saveRegistrants();
+
+            // Add revenue entry
+            try {
+                await this.githubAPI.addRevenueEntry(
+                    newRegistrant.name,
+                    newRegistrant.group,
+                    newRegistrant.gender,
+                    registrationDate
+                );
+            } catch (revenueError) {
+                console.error('Error adding revenue entry:', revenueError);
+                // Don't throw error for revenue tracking failure - continue with successful registration
+            }
 
             return newRegistrant;
         } catch (error) {
