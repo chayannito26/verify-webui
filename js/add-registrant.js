@@ -53,6 +53,22 @@ class AddRegistrantPage {
 
         // Student data lookup (if available)
         document.getElementById('roll').addEventListener('blur', () => this.lookupStudentData());
+
+        // Import-from-text parsing (if UI exists on page)
+        const importTextarea = document.getElementById('import_text');
+        const parseBtn = document.getElementById('parse-text-btn');
+        const clearBtn = document.getElementById('clear-import-btn');
+        const importFeedback = document.getElementById('import-feedback');
+
+        if (parseBtn && importTextarea) {
+            parseBtn.addEventListener('click', () => this.handleParse(importTextarea, importFeedback));
+        }
+        if (clearBtn && importTextarea) {
+            clearBtn.addEventListener('click', () => {
+                importTextarea.value = '';
+                if (importFeedback) importFeedback.textContent = '';
+            });
+        }
     }
 
     getCurrentDate() {
@@ -137,6 +153,176 @@ class AddRegistrantPage {
             statusDiv.textContent = 'Lookup failed';
             statusDiv.className = 'mt-1 text-xs text-red-600 text-center';
         }
+    }
+
+    // --- Parsing helpers ---
+    findEmail(text) {
+        const re = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi;
+        const m = text.match(re);
+        return m ? m[0].trim() : '';
+    }
+
+    findPhone(text) {
+        const candidates = text.match(/[0-9\-+\s]{6,20}/g) || [];
+        for (const c of candidates) {
+            let digits = c.replace(/[^0-9]/g, '');
+            if (digits.startsWith('88')) digits = digits.slice(2);
+            if (digits.length === 11) return digits;
+        }
+        const run = text.match(/\b(\d{11})\b/);
+        return run ? run[1] : '';
+    }
+
+    findTshirtSize(text) {
+        const sizes = ['XS','S','M','L','XL','XXL','2XL','3XL','4XL'];
+        const re = new RegExp("\\b(" + sizes.join('|') + ")\\b", 'i');
+        const m = text.match(re);
+        return m ? m[1].toUpperCase().replace(/^2XL$/,'XXL') : '';
+    }
+
+    detectGroupFromText(text) {
+        const t = text.toLowerCase();
+        if (t.includes('science') || t.includes('sc') || t.includes('sci')) return 'SC';
+        if (t.includes('arts') || t.includes('art')) return 'AR';
+        if (t.includes('commerce') || t.includes('com')) return 'CO';
+        return '';
+    }
+
+    findRoll(text) {
+        const labeled = text.match(/roll[:\-\s]*?(\d{3}|\d{5}|\d{13})/i);
+        if (labeled) return labeled[1];
+        const m13 = text.match(/\b(\d{13})\b/);
+        if (m13) return m13[1];
+        const m5 = text.match(/\b(\d{5})\b/);
+        if (m5) return m5[1];
+        const m3 = text.match(/\b(\d{3})\b/);
+        if (m3) return m3[1];
+        return '';
+    }
+
+    normalizeRoll(rawRoll) {
+        if (!rawRoll) return '';
+        if (rawRoll.length === 13) return rawRoll;
+        if (rawRoll.length === 5) return '12024250' + rawRoll;
+        // For 3-digit we return raw; do not auto-prefix here
+        if (rawRoll.length === 3) return rawRoll;
+        return rawRoll;
+    }
+
+    inferGroupFromRoll(roll) {
+        if (!roll || roll.length < 10) return '';
+        let code = '';
+        if (roll.startsWith('1202425')) {
+            code = roll.substring(8);
+            if (code.startsWith('1') && !code.startsWith('13')) return 'SC';
+            if (code.startsWith('2')) return 'AR';
+            if (code.startsWith('3')) return 'CO';
+        }
+        return '';
+    }
+
+    findName(lines, usedPatterns) {
+        for (const l of lines) {
+            const s = l.trim();
+            if (!s) continue;
+            const low = s.toLowerCase();
+            if (usedPatterns.some(p => p && low.includes(p.toLowerCase()))) continue;
+            if (low === 'you sent' || low.startsWith('you sent ')) continue;
+            if (s.includes('@')) continue;
+            const digitCount = (s.match(/\d/g) || []).length;
+            if (digitCount > 4) continue;
+            return s;
+        }
+        return '';
+    }
+
+    // Handler used by add.html import UI
+    handleParse(importTextarea, importFeedback) {
+        const text = importTextarea.value || '';
+        if (!text.trim()) {
+            if (importFeedback) importFeedback.textContent = 'No text to parse';
+            return;
+        }
+
+        const email = this.findEmail(text);
+        const phone = this.findPhone(text);
+        const tshirt = this.findTshirtSize(text);
+        const inferredGroup = this.detectGroupFromText(text);
+        const rawRoll = this.findRoll(text);
+        const roll = this.normalizeRoll(rawRoll);
+
+        const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        const name = this.findName(lines, [email, phone, tshirt, rawRoll]);
+
+        const found = [];
+        if (name) {
+            const nameInput = document.getElementById('name');
+            if (nameInput && !nameInput.value.trim()) {
+                nameInput.value = name;
+            }
+            found.push('name');
+        }
+        if (email) {
+            const emailInput = document.getElementById('email');
+            if (emailInput && !emailInput.value.trim()) emailInput.value = email;
+            found.push('email');
+        }
+        if (phone) {
+            const phoneInput = document.getElementById('phone');
+            if (phoneInput && !phoneInput.value.trim()) phoneInput.value = phone;
+            found.push('phone');
+        }
+        if (tshirt) {
+            const tshirtInput = document.getElementById('tshirt_size');
+            if (tshirtInput) {
+                tshirtInput.value = tshirt;
+                document.getElementById('part_tshirt').checked = true;
+                const wrapper = document.getElementById('tshirt-size-container');
+                if (wrapper) wrapper.style.display = '';
+            }
+            found.push('tshirt');
+        }
+        if (roll) {
+            const rollInput = document.getElementById('roll');
+            if (rollInput) {
+                rollInput.value = roll;
+            }
+            // trigger lookup via existing lookupStudentData behavior
+            try {
+                this.lookupStudentData();
+            } catch (e) {
+                console.warn('Lookup after parse failed', e);
+            }
+
+            // Group inference only when roll normalized is 13 digits (5-digit input normalized to 13 OR native 13)
+            const rawLen = rawRoll ? rawRoll.length : 0;
+            const normLen = roll ? roll.replace(/\D/g, '').length : 0;
+            if ((rawLen === 5) || (normLen === 13)) {
+                const grpFromRoll = this.inferGroupFromRoll(roll);
+                if (grpFromRoll) {
+                    const groupSelect = document.getElementById('group');
+                    if (groupSelect && !groupSelect.value) {
+                        groupSelect.value = grpFromRoll;
+                        this.updateRegistrationId();
+                    }
+                }
+            } else {
+                // don't set group for 3-digit raw rolls
+            }
+
+            found.push('roll');
+        } else {
+            if (inferredGroup) {
+                const groupSelect = document.getElementById('group');
+                if (groupSelect && !groupSelect.value) {
+                    groupSelect.value = inferredGroup;
+                    this.updateRegistrationId();
+                    found.push('group');
+                }
+            }
+        }
+
+        if (importFeedback) importFeedback.textContent = found.length ? 'Parsed: ' + found.join(', ') : 'No fields detected';
     }
 
     async handleSubmit(e) {

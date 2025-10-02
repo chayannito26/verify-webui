@@ -249,6 +249,17 @@
                         </div>
                     </div>
 
+                    <!-- Import from text (paste) -->
+                    <div>
+                        <label for="import_text" class="block text-sm font-medium text-gray-700">Import from text</label>
+                        <textarea id="import_text" rows="5" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" placeholder="Paste name, email, phone, roll etc. here"></textarea>
+                        <div class="mt-2 flex gap-2">
+                            <button type="button" id="parse-text-btn" class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700">Parse</button>
+                            <button type="button" id="clear-import-btn" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Clear</button>
+                            <span id="import-feedback" class="text-sm text-gray-600 ml-3"></span>
+                        </div>
+                    </div>
+
                     <!-- Form Actions -->
                     <div class="flex items-center justify-between pt-6 border-t border-gray-200">
                         <a href="index.html" 

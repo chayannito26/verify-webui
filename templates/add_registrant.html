@@ -219,6 +219,17 @@
                     </div>
                 </div>
 
+                <!-- Import from text (paste) -->
+                <div class="mt-6 mb-6">
+                    <label for="import_text" class="block text-sm font-medium text-gray-700">Import from text</label>
+                    <textarea id="import_text" rows="5" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" placeholder="Paste name, email, phone, roll etc. here"></textarea>
+                    <div class="mt-2 flex gap-2">
+                        <button type="button" id="parse-text-btn" class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700">Parse</button>
+                        <button type="button" id="clear-import-btn" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Clear</button>
+                        <span id="import-feedback" class="text-sm text-gray-600 ml-3"></span>
+                    </div>
+                </div>
+
                 <!-- Form Actions -->
                 <div class="mt-8 flex items-center justify-between">
                     <a href="{{ url_for('index') }}" 
@@ -372,7 +383,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     fieldAutoFilled.gender = true;
                 }
                 
-                if (!fieldEditState.group && (groupSelect && (!groupSelect.value || fieldAutoFilled.group))) {
+                // Only set group if the API returned a non-empty group value. This avoids clearing
+                // an existing selection when the API has no group info.
+                if (data.student.group && !fieldEditState.group && (groupSelect && (!groupSelect.value || fieldAutoFilled.group))) {
                     groupSelect.value = data.student.group;
                     fieldAutoFilled.group = true;
                 }
@@ -498,6 +511,211 @@ document.addEventListener('DOMContentLoaded', function() {
     if (rollInput && rollInput.value.trim()) {
         fetchStudentData(rollInput.value.trim());
     }
+
+    // --- Import-from-text parsing logic ---
+    const importTextarea = document.getElementById('import_text');
+    const parseBtn = document.getElementById('parse-text-btn');
+    const clearBtn = document.getElementById('clear-import-btn');
+    const importFeedback = document.getElementById('import-feedback');
+
+    function findEmail(text) {
+        const re = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi;
+        const m = text.match(re);
+        return m ? m[0].trim() : '';
+    }
+
+    function findPhone(text) {
+        // Find groups of digits and hyphens, then normalize and pick 11-digit numbers
+        const candidates = text.match(/[0-9\-+\s]{6,20}/g) || [];
+        for (const c of candidates) {
+            // remove non-digits
+            let digits = c.replace(/[^0-9]/g, '');
+            // If number contains country code 88 or 880 (like +880...), strip leading '88' so local 0 is preserved
+            if (digits.startsWith('88')) {
+                digits = digits.slice(2);
+            }
+            // Accept 11-digit local numbers (e.g., 01XXXXXXXXX)
+            if (digits.length === 11) return digits;
+        }
+        // fallback: any 11-digit run
+        const run = text.match(/\b(\d{11})\b/);
+        return run ? run[1] : '';
+    }
+
+    function findTshirtSize(text) {
+        // common sizes, case-insensitive, variants like 2XL/XXL
+        const sizes = ['XS','S','M','L','XL','XXL','2XL','3XL','4XL'];
+        const re = new RegExp("\\b(" + sizes.join('|') + ")\\b", 'i');
+        const m = text.match(re);
+        return m ? m[1].toUpperCase().replace(/^2XL$/,'XXL') : '';
+    }
+
+    function detectGroupFromText(text) {
+        const t = text.toLowerCase();
+        if (t.includes('science') || t.includes('sc') || t.includes('sci')) return 'SC';
+        if (t.includes('arts') || t.includes('art')) return 'AR';
+        if (t.includes('commerce') || t.includes('com')) return 'CO';
+        return '';
+    }
+
+    function findRoll(text) {
+        // Look for explicit 'roll' labels first
+        const labeled = text.match(/roll[:\-\s]*?(\d{3}|\d{5}|\d{13})/i);
+        if (labeled) return labeled[1];
+
+        // Otherwise find any digit runs of length 13,5,3 (prefer longer)
+        const m13 = text.match(/\b(\d{13})\b/);
+        if (m13) return m13[1];
+        const m5 = text.match(/\b(\d{5})\b/);
+        if (m5) return m5[1];
+        const m3 = text.match(/\b(\d{3})\b/);
+        if (m3) return m3[1];
+        return '';
+    }
+
+    function normalizeRoll(rawRoll, inferredGroup) {
+        if (!rawRoll) return '';
+        if (rawRoll.length === 13) return rawRoll;
+        if (rawRoll.length === 5) return '12024250' + rawRoll;
+        if (rawRoll.length === 3) {
+            // For 3-digit rolls we don't auto-prefix here because department should remain empty
+            // Caller will decide whether to prefix later (we avoid inferring department automatically)
+            return rawRoll;
+        }
+        return rawRoll;
+    }
+
+    function findName(lines, usedPatterns) {
+        // Return the first non-empty line that doesn't match used patterns (email/phone/size/roll)
+        for (const l of lines) {
+            const s = l.trim();
+            if (!s) continue;
+            const low = s.toLowerCase();
+            if (usedPatterns.some(p => p && low.includes(p.toLowerCase()))) continue;
+            // Ignore common non-name lines like 'You sent'
+            if (low === 'you sent' || low.startsWith('you sent ')) continue;
+            // Skip lines that are clearly not a name (contain '@' or many digits)
+            if (s.includes('@')) continue;
+            const digitCount = (s.match(/\d/g) || []).length;
+            if (digitCount > 4) continue;
+            // Likely name
+            return s;
+        }
+        return '';
+    }
+
+    function parseAndPopulate() {
+        const text = importTextarea.value || '';
+        if (!text.trim()) {
+            importFeedback.textContent = 'No text to parse';
+            return;
+        }
+
+        const email = findEmail(text);
+        const phone = findPhone(text);
+        const tshirt = findTshirtSize(text);
+        const inferredGroup = detectGroupFromText(text);
+        const rawRoll = findRoll(text);
+        const roll = normalizeRoll(rawRoll, inferredGroup);
+
+        const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        const name = findName(lines, [email, phone, tshirt, rawRoll]);
+
+        const found = [];
+        if (name) {
+            if (!fieldEditState.name) {
+                nameInput.value = name;
+                fieldAutoFilled.name = true;
+            }
+            found.push('name');
+        }
+        if (email) {
+            const emailInput = document.getElementById('email');
+            if (emailInput && !emailInput.value.trim()) emailInput.value = email;
+            found.push('email');
+        }
+        if (phone) {
+            if (!fieldEditState.phone) {
+                phoneInput.value = phone;
+                fieldAutoFilled.phone = true;
+            }
+            found.push('phone');
+        }
+        if (tshirt) {
+            const tshirtInput = document.getElementById('tshirt_size');
+            if (tshirtInput) {
+                tshirtInput.value = tshirt;
+                // ensure T-Shirt checkbox is checked
+                document.querySelectorAll('input[name="parts_available"]').forEach(cb => {
+                    if (cb.value === 'T-Shirt') cb.checked = true;
+                });
+                updateTshirtVisibility();
+            }
+            found.push('tshirt');
+        }
+        if (roll) {
+            rollInput.value = roll;
+            rollInput.dataset.autofill = '1';
+
+            // Trigger same student lookup that runs when roll is edited (loads image/status)
+            try {
+                debouncedFetchStudentData(roll);
+            } catch (e) {
+                // ignore errors from lookup
+                console.warn('Lookup after parse failed', e);
+            }
+
+            // Decide whether to infer department (group) from the roll.
+            // Rules:
+            // - If the input roll was 5 digits (normalized to 13) or the normalized roll is 13 digits,
+            //   infer group from the roll and set it (unless user edited group).
+            // - If the input roll was 3 digits, do NOT set the group (leave department empty).
+            const rawLen = rawRoll ? rawRoll.length : 0;
+            const normLen = roll ? (roll.replace(/\D/g, '').length) : 0;
+
+            if ((rawLen === 5) || (normLen === 13)) {
+                const grpFromRoll = inferGroupFromRoll(roll);
+                if (grpFromRoll && !fieldEditState.group) {
+                    groupSelect.value = grpFromRoll;
+                    fieldAutoFilled.group = true;
+                    updateRegIdPreview();
+                    found.push('group');
+                }
+            }
+
+            // For 3-digit raw rolls we intentionally do not set group here.
+            found.push('roll');
+        } else {
+            // No roll parsed: fallback to textual group detection if available
+            if (inferredGroup && !fieldEditState.group) {
+                groupSelect.value = inferredGroup;
+                fieldAutoFilled.group = true;
+                updateRegIdPreview();
+                found.push('group');
+            }
+        }
+
+        importFeedback.textContent = found.length ? 'Parsed: ' + found.join(', ') : 'No fields detected';
+    }
+
+    if (parseBtn) {
+        parseBtn.addEventListener('click', function() {
+            try {
+                parseAndPopulate();
+            } catch (err) {
+                console.error('Error parsing import text', err);
+                importFeedback.textContent = 'Error parsing text';
+            }
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            importTextarea.value = '';
+            importFeedback.textContent = '';
+        });
+    }
+
 
     // Show/hide T-shirt size based on checkbox
     function updateTshirtVisibility() {
