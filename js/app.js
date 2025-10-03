@@ -294,17 +294,38 @@ class App {
             return;
         }
 
-        if (!confirm(`Are you sure you want to delete ${registrant.name} (${registrationId})?`)) {
+        if (!confirm(`Are you sure you want to delete ${registrant.name} (${registrationId})? This action cannot be undone.`)) {
             return;
         }
 
+        // Ask whether to delete the associated revenue entry as well
+        const alsoDeleteRevenue = confirm(`Also delete revenue entry for ${registrant.name}? Click OK to delete revenue, or Cancel to keep revenue records.`);
+
         try {
+            // Delete registrant via DataManager (updates registrants.json via GitHub API)
             await this.dataManager.deleteRegistrant(registrationId);
-            UIUtils.showFlashMessage(`${registrant.name} has been deleted successfully`, 'success');
-            this.renderDashboard();
+
+            // If revenue deletion requested, remove matching revenue entries via GitHub API
+            if (alsoDeleteRevenue) {
+                const { data: revenues, sha } = await this.githubAPI.loadRevenues();
+                // Remove entries where comments === registrant.name and type === 'Registration'
+                const filtered = revenues.filter(e => !(e.comments === registrant.name && e.type === 'Registration'));
+                if (filtered.length < revenues.length) {
+                    await this.githubAPI.updateRevenuesFile(filtered, sha);
+                    UIUtils.showFlashMessage(`${registrant.name} and associated revenue entries deleted successfully.`, 'success');
+                } else {
+                    UIUtils.showFlashMessage(`${registrant.name} deleted. No matching revenue entries found.`, 'success');
+                }
+            } else {
+                UIUtils.showFlashMessage(`${registrant.name} has been deleted successfully`, 'success');
+            }
+
+            // Refresh local data and UI
+            await this.loadDashboard();
+
         } catch (error) {
             console.error('Delete error:', error);
-            UIUtils.showFlashMessage('Failed to delete registrant: ' + error.message, 'error');
+            UIUtils.showFlashMessage('Failed to delete registrant: ' + (error.message || error), 'error');
         }
     }
 

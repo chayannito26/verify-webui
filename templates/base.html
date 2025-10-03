@@ -145,6 +145,32 @@
         }, 5000);
     </script>
     <script>
+        // Global helper for delete forms: confirm deletion and optionally delete revenue entry
+        function confirmDelete(form, name) {
+            // Primary confirm for deletion
+            if (!confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+                return false;
+            }
+
+            // Secondary confirm for removing associated revenue
+            var alsoDeleteRevenue = confirm('Also delete this registrant\'s revenue entry from revenues.json? Click OK to delete revenue, or Cancel to keep revenue records.');
+
+            // Ensure there's a hidden input named delete_revenue on the form; create if missing
+            var input = form.querySelector('input[name="delete_revenue"]');
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'delete_revenue';
+                form.appendChild(input);
+            }
+
+            input.value = alsoDeleteRevenue ? '1' : '0';
+
+            // Allow form to submit
+            return true;
+        }
+    </script>
+    <script>
         // Push to GitHub handler
         document.addEventListener('DOMContentLoaded', function() {
             const btn = document.getElementById('push-github-btn');

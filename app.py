@@ -462,19 +462,62 @@ def edit_registrant(registration_id):
 def delete_registrant(registration_id):
     """Delete a registrant."""
     registrants = load_registrants()
-    
-    # Find and remove the registrant
-    original_count = len(registrants)
-    registrants = [r for r in registrants if r.get('registration_id') != registration_id]
-    
-    if len(registrants) < original_count:
-        if save_registrants(registrants):
-            flash(f'Successfully deleted registrant with ID {registration_id}.', 'success')
-        else:
-            flash('Failed to delete registrant. Please try again.', 'error')
-    else:
+    # Find the registrant to delete
+    registrant_to_delete = None
+    for r in registrants:
+        if r.get('registration_id') == registration_id:
+            registrant_to_delete = r
+            break
+
+    if not registrant_to_delete:
         flash(f'Registrant with ID {registration_id} not found.', 'error')
-    
+        return redirect(url_for('index'))
+
+    # Remove from registrants list
+    registrants = [r for r in registrants if r.get('registration_id') != registration_id]
+
+    if not save_registrants(registrants):
+        flash('Failed to delete registrant. Please try again.', 'error')
+        return redirect(url_for('index'))
+
+    # Check if the form requested deletion of the revenue entry as well
+    try:
+        delete_revenue_flag = False
+        if request.method == 'POST':
+            # form field 'delete_revenue' set to '1' when user confirmed
+            delete_revenue_flag = request.form.get('delete_revenue', '0') in ('1', 'true', 'True')
+
+        if delete_revenue_flag:
+            # Load revenues and remove entries that match this registrant's name and look like registration revenue
+            revenues = load_revenues()
+            original_len = len(revenues)
+
+            # Match by comments (name) and type/source to avoid accidental removals
+            def matches_revenue_entry(entry):
+                try:
+                    if entry.get('comments') == registrant_to_delete.get('name') and entry.get('type') == 'Registration':
+                        return True
+                except Exception:
+                    return False
+                return False
+
+            revenues = [e for e in revenues if not matches_revenue_entry(e)]
+
+            if len(revenues) < original_len:
+                if save_revenues(revenues):
+                    # Attempt to push changes in income repo
+                    push_income_repo()
+                    flash(f'Successfully deleted registrant and associated revenue entries for {registrant_to_delete.get("name")}.', 'success')
+                else:
+                    flash('Registrant deleted but failed to update revenues file. Please check the server logs.', 'error')
+            else:
+                flash(f'Registrant deleted, but no matching revenue entries were found for {registrant_to_delete.get("name")}.', 'success')
+        else:
+            flash(f'Successfully deleted registrant with ID {registration_id}.', 'success')
+    except Exception as e:
+        print(f'Error while deleting revenue entry: {str(e)}')
+        flash(f'Deleted registrant but encountered an error while handling revenue entries: {str(e)}', 'error')
+
     return redirect(url_for('index'))
 
 @app.route('/api/stats')
