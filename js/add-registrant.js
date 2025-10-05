@@ -189,7 +189,8 @@ class AddRegistrantPage {
     }
 
     findRoll(text) {
-        const labeled = text.match(/roll[:\-\s]*?(\d{3}|\d{5}|\d{13})/i);
+        // Prefer longer roll patterns first (13 -> 5 -> 3). Also accept common labels like "roll", "roll no", "roll number".
+        const labeled = text.match(/roll(?:\s*(?:no|number))?[:\-\s]*?(\d{13}|\d{5}|\d{3})/i);
         if (labeled) return labeled[1];
         const m13 = text.match(/\b(\d{13})\b/);
         if (m13) return m13[1];
@@ -222,15 +223,84 @@ class AddRegistrantPage {
     }
 
     findName(lines, usedPatterns) {
+        // Words that indicate the line is a label rather than part of the actual name
+        const ignoreWords = ['name', 'roll', 'mail', 'email', 'serial', 'tshirt', 'number', 'phone'];
+
         for (const l of lines) {
-            const s = l.trim();
+            if (!l) continue;
+            let s = l.trim();
             if (!s) continue;
+
+            const lowOrig = s.toLowerCase();
+            if (lowOrig === 'you sent' || lowOrig.startsWith('you sent ')) continue;
+
+            // If the line contains a colon, assume it's a label like "Name: John Doe" and take the part after the first colon.
+            if (s.includes(':')) {
+                // Take the last non-empty token after splitting on ':' that contains letters
+                const parts = s.split(':').map(p => p.trim()).filter(Boolean);
+                if (parts.length > 1) {
+                    const rev = parts.slice().reverse();
+                    // Prefer tokens that contain at least 2 letters (avoid single-letter tshirt tokens)
+                    let foundToken = rev.find(tok => (tok.match(/[A-Za-z]/g) || []).length > 1);
+                    if (!foundToken) {
+                        // fallback to any token with at least one letter
+                        foundToken = rev.find(tok => /[A-Za-z]/.test(tok));
+                    }
+                    if (foundToken) {
+                        s = foundToken;
+                    } else {
+                        // fallback to everything after first colon
+                        const after = s.split(':').slice(1).join(':').trim();
+                        if (after) s = after;
+                    }
+                } else {
+                    const after = s.split(':').slice(1).join(':').trim();
+                    if (after) s = after;
+                }
+            }
+
+            // If the line starts with one of the ignore words followed by space/colon/hyphen, strip that leading label
+            for (const w of ignoreWords) {
+                const esc = w.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&');
+                const labelRe = new RegExp('^' + esc + '[:\\s\-]+', 'i');
+                if (labelRe.test(s)) {
+                    s = s.replace(labelRe, '').trim();
+                }
+            }
+
+            // Remove any stray colons that may remain
+            s = s.replace(/:/g, '').trim();
+            if (!s) continue;
+
+            // Skip if the cleaned line contains any of the detected patterns (email, phone, tshirt, roll etc.)
             const low = s.toLowerCase();
-            if (usedPatterns.some(p => p && low.includes(p.toLowerCase()))) continue;
-            if (low === 'you sent' || low.startsWith('you sent ')) continue;
+            const containsUsedPattern = usedPatterns.some(p => {
+                if (!p) return false;
+                const esc = p.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&');
+                try {
+                    const re = new RegExp('\\b' + esc + '\\b', 'i');
+                    return re.test(s);
+                } catch (e) {
+                    return low.includes(p.toLowerCase());
+                }
+            });
+            if (containsUsedPattern) continue;
+
+            // Skip obvious non-name lines
             if (s.includes('@')) continue;
+            // Reject lines that are likely obfuscated phone placeholders like 017xxxxxxx
+            if (/x{3,}/i.test(s)) continue;
             const digitCount = (s.match(/\d/g) || []).length;
             if (digitCount > 4) continue;
+
+            // Require at least one letter and a reasonable ratio of letters to length
+            const letters = (s.match(/[A-Za-z]/g) || []).length;
+            if (letters === 0) continue;
+            if (letters / s.length < 0.35) continue;
+
+            // If the cleaned line is exactly one of the ignore words, skip it
+            if (ignoreWords.includes(low)) continue;
+
             return s;
         }
         return '';
