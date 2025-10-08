@@ -267,28 +267,46 @@ def group_registrants(registrants):
 
 @app.route('/')
 def index():
-    """Main dashboard showing all registrants grouped by group and gender."""
+    """Display the main dashboard with registrants."""
+    view_mode = request.args.get('view', 'cards')
+    sort_by = request.args.get('sort_by', 'name')
+    sort_order = request.args.get('sort_order', 'asc')
+
     registrants = load_registrants()
-    grouped = group_registrants(registrants)
-    
-    # Calculate statistics
-    total_registrants = len(registrants)
-    active_registrants = len([r for r in registrants if not r.get('revoked', False)])
-    total_payments = sum(r.get('paid', 0) for r in registrants)
-    
+
+    # Sorting logic
+    reverse = sort_order == 'desc'
+    if sort_by == 'roll':
+        # Sort by the last 5 digits of the roll number, converting to int for proper numeric sorting
+        all_registrants_sorted = sorted(registrants, key=lambda x: int(x['roll'][-5:]) if x['roll'] and x['roll'][-5:].isdigit() else 0, reverse=reverse)
+    elif sort_by == 'registration_id':
+        all_registrants_sorted = sorted(registrants, key=lambda x: x['registration_id'], reverse=reverse)
+    else:  # Default to sorting by name
+        all_registrants_sorted = sorted(registrants, key=lambda x: x['name'], reverse=reverse)
+
+    grouped = {}
+    if view_mode == 'cards':
+        grouped = group_registrants(all_registrants_sorted)
+
     stats = {
-        'total': total_registrants,
-        'active': active_registrants,
-        'revoked': total_registrants - active_registrants,
-        'total_payments': total_payments
+        'total': len(registrants),
+        'active': len([r for r in registrants if not r.get('revoked')]),
+        'revoked': len([r for r in registrants if r.get('revoked')]),
+        'total_payments': sum(r.get('paid', 0) for r in registrants if not r.get('revoked'))
     }
-    
-    return render_template('index.html', 
-                         grouped=grouped, 
-                         GROUP_INFO=GROUP_INFO, 
-                         GENDER_INFO=GENDER_INFO,
-                         stats=stats,
-                         get_verification_url=get_verification_url)
+
+    return render_template(
+        'index.html',
+        grouped=grouped,
+        all_registrants=all_registrants_sorted,
+        stats=stats,
+        GROUP_INFO=GROUP_INFO,
+        GENDER_INFO=GENDER_INFO,
+        view_mode=view_mode,
+        get_verification_url=get_verification_url,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_registrant():
