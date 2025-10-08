@@ -437,6 +437,58 @@ def edit_registrant(registration_id):
     
     if request.method == 'POST':
         # Update registrant data
+        # Handle potential registration_id change
+        new_registration_id = request.form.get('registration_id', '').strip()
+        old_registration_id = registrant.get('registration_id', '')
+        registrants_all = registrants  # alias for clarity
+        # Validate and ensure uniqueness if changed
+        if new_registration_id and new_registration_id != old_registration_id:
+            # Basic format check: should contain two hyphens e.g. 'AR-B-0001'
+            parts = new_registration_id.split('-')
+            if len(parts) < 3:
+                flash('Invalid registration ID format. Expected like AR-B-0001.', 'error')
+                return render_template('edit_registrant.html', 
+                                     registrant=registrant,
+                                     GROUP_INFO=GROUP_INFO, 
+                                     GENDER_INFO=GENDER_INFO,
+                                     TSHIRT_SIZES=TSHIRT_SIZES,
+                                     get_verification_url=get_verification_url)
+            # Check uniqueness across other registrants
+            if any(r.get('registration_id') == new_registration_id for r in registrants_all if r is not registrant):
+                flash(f'Registration ID {new_registration_id} is already in use. Please choose a different ID.', 'error')
+                return render_template('edit_registrant.html', 
+                                     registrant=registrant,
+                                     GROUP_INFO=GROUP_INFO, 
+                                     GENDER_INFO=GENDER_INFO,
+                                     TSHIRT_SIZES=TSHIRT_SIZES,
+                                     get_verification_url=get_verification_url)
+            # Try to infer group and gender from the new ID and validate against submitted gender
+            parsed_group = parts[0]
+            parsed_gender_short = parts[1]
+            parsed_gender_full = None
+            for g, info in GENDER_INFO.items():
+                if info.get('short') == parsed_gender_short:
+                    parsed_gender_full = g
+                    break
+
+            submitted_gender = request.form.get('gender', '')
+            # If both submitted gender and parsed gender exist and conflict, ask user to fix
+            if submitted_gender and parsed_gender_full and submitted_gender != parsed_gender_full:
+                flash('The gender encoded in the new Registration ID does not match the selected gender. Please make them consistent.', 'error')
+                return render_template('edit_registrant.html', 
+                                     registrant=registrant,
+                                     GROUP_INFO=GROUP_INFO, 
+                                     GENDER_INFO=GENDER_INFO,
+                                     TSHIRT_SIZES=TSHIRT_SIZES,
+                                     get_verification_url=get_verification_url)
+
+            # Update group if valid
+            if parsed_group in GROUP_INFO:
+                registrant['group'] = parsed_group
+
+            # Finally update the registration_id on the registrant
+            registrant['registration_id'] = new_registration_id
+
         registrant['name'] = request.form.get('name', '').strip()
         registrant['roll'] = request.form.get('roll', '').strip()
         registrant['gender'] = request.form.get('gender', '')
@@ -475,6 +527,7 @@ def edit_registrant(registration_id):
         if photo_url:
             registrant['photo'] = photo_url
         
+        # Update the list entry
         registrants[registrant_index] = registrant
         
         if save_registrants(registrants):

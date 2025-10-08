@@ -17,7 +17,7 @@
         <div class="bg-white shadow rounded-lg">
             <form method="POST" class="px-6 py-8">
                 <div class="grid grid-cols-1 gap-6">
-                    <!-- Registration ID (read-only) -->
+                    <!-- Registration ID (editable) -->
                     <div>
                         <label for="registration_id" class="block text-sm font-medium text-gray-700">
                             Registration ID
@@ -26,9 +26,8 @@
                                name="registration_id" 
                                id="registration_id" 
                                value="{{ registrant.registration_id }}"
-                               readonly
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 sm:text-sm">
-                        <p class="mt-1 text-xs text-gray-500">Registration ID cannot be changed</p>
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm">
+                        <p class="mt-1 text-xs text-gray-500">You can change the registration ID here. Ensure it remains unique and follows the format e.g. <code>AR-B-0001</code>.</p>
                     </div>
 
                     <!-- Roll Number and Student Image -->
