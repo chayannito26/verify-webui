@@ -180,29 +180,46 @@ def get_verification_url(reg_id):
     filename = id_to_filename(reg_id)
     return f"{VERIFICATION_BASE_URL}/{filename}.html"
 
-def get_next_registration_id(group, gender):
-    """Generate the next registration ID for a group and gender."""
+def get_next_registration_id(group, gender, ignore_ids=None):
+    """Generate the next registration ID for a group and gender.
+
+    This returns the lowest available sequence number (first gap) for the
+    given group/gender prefix. Optionally, pass `ignore_ids` as an iterable of
+    registration_id strings which should be treated as taken for this
+    calculation (useful to reserve or exclude certain IDs even if vacant).
+    """
     registrants = load_registrants()
     gender_short = GENDER_INFO[gender]['short']
     prefix = f"{group}-{gender_short}-"
-    
-    # Find existing IDs with this prefix
-    existing_numbers = []
+
+    # Collect taken numbers from existing registrants
+    taken = set()
     for reg in registrants:
         reg_id = reg.get('registration_id', '')
         if reg_id.startswith(prefix):
             try:
                 number = int(reg_id.split('-')[-1])
-                existing_numbers.append(number)
-            except ValueError:
+                taken.add(number)
+            except Exception:
                 continue
-    
-    # Get next number
-    if existing_numbers:
-        next_number = max(existing_numbers) + 1
-    else:
-        next_number = 1
-    
+
+    # Include ignore_ids (treat them as taken) if provided
+    if ignore_ids:
+        for iid in ignore_ids:
+            if not isinstance(iid, str):
+                continue
+            if iid.startswith(prefix):
+                try:
+                    n = int(iid.split('-')[-1])
+                    taken.add(n)
+                except Exception:
+                    continue
+
+    # Find the smallest positive integer not in taken (first gap)
+    next_number = 1
+    while next_number in taken:
+        next_number += 1
+
     return f"{prefix}{next_number:04d}"
 
 def group_registrants(registrants):
@@ -235,6 +252,17 @@ def group_registrants(registrants):
                 
                 grouped[group][gender].append(registrant)
     
+    # Sort each group's gender list by registration_id (ascending).
+    # registration_id is expected in the form 'GG-S-####' with zero-padded numbers,
+    # so lexicographic sort works. Fall back to empty string for missing IDs.
+    for grp in grouped.values():
+        for gen, lst in grp.items():
+            try:
+                lst.sort(key=lambda r: r.get('registration_id', ''))
+            except Exception:
+                # If any unexpected data prevents sorting, leave list as-is
+                pass
+
     return grouped
 
 @app.route('/')
@@ -379,8 +407,12 @@ def api_next_registration_id():
     gender = request.args.get('gender')
     if not group or not gender:
         return jsonify({'error': 'missing group or gender'}), 400
+    # parse optional ignore_ids query param: comma-separated registration IDs
+    ignore_param = request.args.get('ignore_ids', '')
+    ignore_ids = [i.strip() for i in ignore_param.split(',') if i.strip()] if ignore_param else None
+
     try:
-        next_id = get_next_registration_id(group, gender)
+        next_id = get_next_registration_id(group, gender, ignore_ids=ignore_ids)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     return jsonify({'next_id': next_id})
