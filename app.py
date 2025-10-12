@@ -49,7 +49,7 @@ CLIENT_MAPPINGS = {
         'Female': 'Nafiza Tanzim Hafsa'
     },
     'CO': {  # Commerce
-        'Male': 'Tanvir Hossain Chowdhury',
+        'Male': 'Tanzid Jayid',
         'Female': 'Mehbuba'
     }
 }
