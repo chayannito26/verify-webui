@@ -398,10 +398,9 @@ def add_registrant():
         
         if save_registrants(registrants):
             # Add revenue entry
+            # Add revenue entry (save to disk immediately). Do NOT auto-push here;
+            # pushing should only happen when the user clicks the Push-to-GitHub button.
             add_revenue_entry(name, group, gender, registration_date_iso)
-            
-            # Push changes to income repository
-            push_income_repo()
             
             flash(f'Successfully added {name} with ID {registration_id}!', 'success')
             return redirect(url_for('index'))
@@ -434,6 +433,91 @@ def api_next_registration_id():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     return jsonify({'next_id': next_id})
+
+@app.route('/api/referrals')
+def api_referrals():
+    """Autocomplete data source for the "Referred By" field.
+
+    Query params:
+      - q: search string; can be part of registration_id or name (case-insensitive)
+      - limit: optional int, max number of results (default 20, capped at 50)
+
+    Response JSON:
+      {
+        "items": [
+          {
+            "registration_id": "AR-B-0001",
+            "name": "John Doe",
+            "group": "AR",
+            "gender": "Male",
+            "label": "AR-B-0001 — John Doe 🎨 🔵"
+          }
+        ]
+      }
+    """
+    q = (request.args.get('q') or '').strip()
+    try:
+        limit = int(request.args.get('limit', '20'))
+    except ValueError:
+        limit = 20
+    limit = max(1, min(limit, 50))
+
+    registrants = load_registrants()
+
+    # If empty query, return most recent up to limit (by registration_date if present)
+    if not q:
+        # Try to sort by registration_id (lexicographic) as an approximation of recency
+        try:
+            sorted_regs = sorted(
+                registrants,
+                key=lambda r: r.get('registration_id', '') or ''
+            )
+        except Exception:
+            sorted_regs = registrants
+        matched = list(reversed(sorted_regs))[:limit]
+    else:
+        q_lower = q.lower()
+        def matches(r):
+            try:
+                rid = (r.get('registration_id') or '').lower()
+                name = (r.get('name') or '').lower()
+                return q_lower in rid or q_lower in name
+            except Exception:
+                return False
+        filtered = [r for r in registrants if matches(r)]
+        # Return up to limit; prefer items where reg_id startswith query, then name contains
+        def sort_key(r):
+            rid = (r.get('registration_id') or '').lower()
+            name = (r.get('name') or '').lower()
+            return (
+                0 if rid.startswith(q_lower) else 1,
+                rid,
+                name
+            )
+        try:
+            filtered.sort(key=sort_key)
+        except Exception:
+            pass
+        matched = filtered[:limit]
+
+    items = []
+    for r in matched:
+        rid = r.get('registration_id') or ''
+        name = r.get('name') or ''
+        group = r.get('group') or ''
+        gender = r.get('gender') or ''
+        grp_emoji = GROUP_INFO.get(group, {}).get('emoji', '')
+        gen_dot = GENDER_INFO.get(gender, {}).get('dot', '')
+        label = f"{rid} — {name} {grp_emoji} {gen_dot}".strip()
+        items.append({
+            'registration_id': rid,
+            'name': name,
+            'group': group,
+            'gender': gender,
+            'label': label
+        })
+
+    return jsonify({'items': items})
 
 @app.route('/edit/<registration_id>', methods=['GET', 'POST'])
 def edit_registrant(registration_id):
@@ -608,8 +692,8 @@ def delete_registrant(registration_id):
 
             if len(revenues) < original_len:
                 if save_revenues(revenues):
-                    # Attempt to push changes in income repo
-                    push_income_repo()
+                    # Revenues file saved to disk. Do NOT auto-push here; leave pushing
+                    # to the manual "Push to GitHub" action.
                     flash(f'Successfully deleted registrant and associated revenue entries for {registrant_to_delete.get("name")}.', 'success')
                 else:
                     flash('Registrant deleted but failed to update revenues file. Please check the server logs.', 'error')
@@ -774,47 +858,63 @@ def push_github():
 
     commit_message = data.get('message') or f"Auto commit via web UI @ {datetime.now().isoformat()}"
 
-    repo_dir = Path(__file__).parent.parent / 'verify'
-    def run_cmd(cmd):
-        try:
-            if isinstance(cmd, str):
-                completed = subprocess.run(cmd, cwd=repo_dir, shell=True, capture_output=True, text=True)
-            else:
-                completed = subprocess.run(cmd, cwd=repo_dir, capture_output=True, text=True)
-            return {
-                'returncode': completed.returncode,
-                'stdout': completed.stdout.strip(),
-                'stderr': completed.stderr.strip()
-            }
-        except FileNotFoundError as e:
-            return {'returncode': 127, 'stdout': '', 'stderr': str(e)}
-        except Exception as e:
-            return {'returncode': 1, 'stdout': '', 'stderr': str(e)}
+    # Helper to run git operations in a repo directory
+    def run_git_ops(repo_dir: Path, message: str):
+        repo_dir = Path(repo_dir)
+        result = {
+            'repo': str(repo_dir),
+            'add': None,
+            'commit': None,
+            'push': None,
+            'success': False
+        }
 
-    # Stage everything
-    add_res = run_cmd(['git', 'add', '-A'])
+        def run_cmd(cmd):
+            try:
+                if isinstance(cmd, str):
+                    completed = subprocess.run(cmd, cwd=repo_dir, shell=True, capture_output=True, text=True)
+                else:
+                    completed = subprocess.run(cmd, cwd=repo_dir, capture_output=True, text=True)
+                return {
+                    'returncode': completed.returncode,
+                    'stdout': completed.stdout.strip(),
+                    'stderr': completed.stderr.strip()
+                }
+            except FileNotFoundError as e:
+                return {'returncode': 127, 'stdout': '', 'stderr': str(e)}
+            except Exception as e:
+                return {'returncode': 1, 'stdout': '', 'stderr': str(e)}
 
-    # Commit
-    commit_res = run_cmd(['git', 'commit', '-m', commit_message])
-    # If there's nothing to commit, git returns non-zero and mentions 'nothing to commit'
-    commit_done = False
-    if commit_res['returncode'] == 0:
-        commit_done = True
+        # Ensure directory exists
+        if not repo_dir.exists():
+            result['add'] = {'returncode': 127, 'stdout': '', 'stderr': 'repo directory not found'}
+            return result
 
-    # Push
-    push_res = run_cmd(['git', 'push'])
+        result['add'] = run_cmd(['git', 'add', '-A'])
+        result['commit'] = run_cmd(['git', 'commit', '-m', message])
+        result['push'] = run_cmd(['git', 'push'])
 
-    success = (push_res.get('returncode', 1) == 0)
+        # Consider success when push returncode is 0, or commit was done (0) even if push failed
+        result['success'] = (result['push'].get('returncode', 1) == 0) or (result['commit'].get('returncode', 1) == 0)
+        return result
+
+    # Repos to push: verify (main site data) and income (revenues file)
+    base_dir = Path(__file__).parent.parent
+    verify_repo = base_dir / 'verify'
+    income_repo = base_dir / 'income'
+
+    verify_res = run_git_ops(verify_repo, commit_message)
+    income_res = run_git_ops(income_repo, commit_message)
+
+    overall_success = verify_res.get('success', False) or income_res.get('success', False)
 
     response = {
-        'success': success,
-        'commit_done': commit_done,
-        'add': add_res,
-        'commit': commit_res,
-        'push': push_res
+        'success': overall_success,
+        'verify': verify_res,
+        'income': income_res
     }
 
-    status_code = 200 if success or commit_done else 500
+    status_code = 200 if overall_success else 500
     return jsonify(response), status_code
 
 if __name__ == '__main__':

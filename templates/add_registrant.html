@@ -156,9 +156,12 @@
                             <input type="text" 
                                    name="referred_by" 
                                    id="referred_by"
+                                   list="referred_by_list"
                                    value="{{ form_data.referred_by if form_data else '' }}"
                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                                    placeholder="Registration ID or name">
+                            <datalist id="referred_by_list"></datalist>
+                            <p id="referral-help" class="mt-1 text-xs text-gray-500">Type to search by ID or name. Pick a match or keep free-text.</p>
                         </div>
                     </div>
 
@@ -275,6 +278,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const studentImage = document.getElementById('student-image');
     const studentStatus = document.getElementById('student-status');
     const tshirtSizeWrapper = document.getElementById('tshirt-size-wrapper');
+    const referredByInput = document.getElementById('referred_by');
+    const referredByList = document.getElementById('referred_by_list');
 
     // Track which fields have been manually edited vs auto-filled
     const fieldEditState = {
@@ -419,6 +424,38 @@ document.addEventListener('DOMContentLoaded', function() {
     // Debounced version of fetchStudentData
     const debouncedFetchStudentData = debounce(fetchStudentData, 300);
 
+    // Autocomplete referrals: fetch matching registrants by ID or name
+    async function fetchReferralSuggestions(query) {
+        if (!referredByList) return;
+        // Clear list when query too short
+        const q = (query || '').trim();
+        if (q.length === 0) {
+            referredByList.innerHTML = '';
+            return;
+        }
+        try {
+            const params = new URLSearchParams({ q, limit: '20' });
+            const resp = await fetch(`/api/referrals?${params.toString()}`);
+            if (!resp.ok) throw new Error('Network');
+            const data = await resp.json();
+            const items = Array.isArray(data.items) ? data.items : [];
+            // Populate datalist with options (value=registration_id, label="id — name ...")
+            referredByList.innerHTML = '';
+            items.forEach(it => {
+                const opt = document.createElement('option');
+                opt.value = it.registration_id || '';
+                // Some browsers show label in the dropdown
+                const label = it.label || `${it.registration_id || ''} — ${it.name || ''}`;
+                opt.label = label;
+                opt.textContent = label;
+                referredByList.appendChild(opt);
+            });
+        } catch (e) {
+            // On error, keep input free-form
+        }
+    }
+    const debouncedFetchReferralSuggestions = debounce(fetchReferralSuggestions, 200);
+
     function updateRollPrefix() {
         let prefix = groupPrefixes['SC']; // Default to Science
         if (groupSelect.value && groupPrefixes[groupSelect.value]) {
@@ -502,6 +539,21 @@ document.addEventListener('DOMContentLoaded', function() {
             updateGroupFromRoll();
             debouncedFetchStudentData(rollInput.value.trim());
         });
+    }
+
+    if (referredByInput) {
+        // Update suggestions as the user types
+        referredByInput.addEventListener('input', function () {
+            debouncedFetchReferralSuggestions(referredByInput.value);
+        });
+        // If the user focuses the field with some text, refresh suggestions
+        referredByInput.addEventListener('focus', function () {
+            if (referredByInput.value) {
+                debouncedFetchReferralSuggestions(referredByInput.value);
+            }
+        });
+        // If the user selects an option or changes value, we don't need extra handling;
+        // the chosen value (registration_id) will be submitted as-is. Free-text is allowed too.
     }
 
     // Trigger an initial update on load in case group/gender are pre-selected
