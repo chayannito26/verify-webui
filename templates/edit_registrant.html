@@ -147,6 +147,20 @@
                         </div>
                     </div>
 
+                    <!-- Revenue Clients -->
+                    <div>
+                        <label for="revenue_clients" class="block text-sm font-medium text-gray-700">
+                            Revenue Client(s)
+                        </label>
+                        <input type="text" 
+                               name="revenue_clients" 
+                               id="revenue_clients"
+                               value="{{ revenue_clients or '' }}"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                               placeholder="Comma-separated names (default based on Group + Gender)">
+                        <p class="mt-1 text-xs text-gray-500">This updates the clients array for the registration fee in revenues. Leave as-is to keep current/default.</p>
+                    </div>
+
                     <!-- Photo URL -->
                     <div>
                         <label for="photo" class="block text-sm font-medium text-gray-700">

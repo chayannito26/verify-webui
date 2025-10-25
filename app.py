@@ -46,7 +46,7 @@ CLIENT_MAPPINGS = {
     },
     'AR': {  # Arts
         'Male': 'Sahariar Nafiz',
-        'Female': 'Nafiza Tanzim Hafsa'
+        'Female': 'S Shanta'
     },
     'CO': {  # Commerce
         'Male': 'Tanzid Jayid',
@@ -96,22 +96,50 @@ def save_revenues(revenues):
         print(f'Error saving revenues: {str(e)}')
         return False
 
-def add_revenue_entry(name, group, gender, registration_date):
-    """Add a revenue entry for a new registration."""
+def get_default_clients(group: str, gender: str):
+    """Return default client list for a given group and gender."""
+    try:
+        client_name = CLIENT_MAPPINGS.get(group, {}).get(gender)
+        return [client_name] if client_name else []
+    except Exception:
+        return []
+
+def add_revenue_entry(name, group, gender, registration_date, amount=None, clients=None):
+    """Add a revenue entry for a new registration.
+
+    Args:
+        name (str): Registrant name.
+        group (str): Group code (e.g., AR/SC/CO).
+        gender (str): Gender label (Male/Female).
+        registration_date (str): ISO date string (YYYY-MM-DD).
+        amount (int|None): Collected amount. If None, defaults to 1200.
+        clients (list[str]|None): List of client names to attribute revenue to. If None/empty, defaults by mapping.
+    """
     try:
         revenues = load_revenues()
         
-        # Get client name based on group and gender
-        client_name = CLIENT_MAPPINGS.get(group, {}).get(gender, 'Unknown Client')
+        # Determine clients list
+        clients_list = []
+        if clients:
+            try:
+                # normalize provided clients list (strip empties)
+                clients_list = [c.strip() for c in clients if isinstance(c, str) and c.strip()]
+            except Exception:
+                clients_list = []
+        if not clients_list:
+            # fall back to default mapping
+            default_clients = get_default_clients(group, gender)
+            clients_list = default_clients if default_clients else ['Unknown Client']
         
         # Create revenue entry
         revenue_entry = {
             "id": int(datetime.now().timestamp() * 1000),  # timestamp in milliseconds
             "source": "Registration Fee",
-            "amount": 1200,
+            # Use provided amount if given; fall back to 1200 as a default
+            "amount": int(amount) if amount is not None else 1200,
             "date": registration_date,
             "type": "Registration",
-            "clients": [client_name],
+            "clients": clients_list,
             "comments": name
         }
         
@@ -126,6 +154,61 @@ def add_revenue_entry(name, group, gender, registration_date):
             
     except Exception as e:
         print(f'Error adding revenue entry: {str(e)}')
+        return False
+
+def find_latest_registration_revenue_by_name(name: str):
+    """Find the most recent registration revenue entry by matching comments==name.
+
+    Returns the entry dict and its index in the list, or (None, None) if not found.
+    """
+    try:
+        revenues = load_revenues()
+        candidates = []
+        for idx, entry in enumerate(revenues):
+            try:
+                if entry.get('type') == 'Registration' and entry.get('comments') == name:
+                    candidates.append((idx, entry))
+            except Exception:
+                continue
+        if not candidates:
+            return None, None
+        # choose by max id if present, else latest by date string
+        try:
+            picked = max(candidates, key=lambda p: p[1].get('id', 0))
+        except Exception:
+            try:
+                picked = max(candidates, key=lambda p: p[1].get('date', ''))
+            except Exception:
+                picked = candidates[-1]
+        return picked[1], picked[0]
+    except Exception:
+        return None, None
+
+def update_revenue_clients_for_name(current_name: str, new_name: str, clients: list[str]):
+    """Update clients (and optionally comments/name) for the latest registration revenue entry.
+
+    Returns True if an entry was updated and saved, False otherwise.
+    """
+    try:
+        revenues = load_revenues()
+        entry, idx = find_latest_registration_revenue_by_name(current_name)
+        if entry is None or idx is None:
+            # Try matching by new_name if current_name not found
+            entry, idx = find_latest_registration_revenue_by_name(new_name)
+        if entry is None or idx is None:
+            return False
+        # Normalize clients list
+        clean_clients = [c.strip() for c in (clients or []) if isinstance(c, str) and c.strip()]
+        if not clean_clients:
+            return False
+        entry['clients'] = clean_clients
+        # Keep comments aligned with current registrant name if changed
+        if new_name and entry.get('comments') != new_name:
+            entry['comments'] = new_name
+        revenues[idx] = entry
+        return save_revenues(revenues)
+    except Exception as e:
+        print(f'Error updating revenue clients: {str(e)}')
         return False
 
 def push_income_repo():
@@ -372,7 +455,7 @@ def add_registrant():
         if 'T-Shirt' not in parts_available:
             tshirt_size = ''
 
-        # Create new registrant
+    # Create new registrant
         registration_date_obj = datetime.now()
         registration_date_str = registration_date_obj.strftime('%d %B %Y')
         registration_date_iso = registration_date_obj.strftime('%Y-%m-%d')
@@ -398,9 +481,12 @@ def add_registrant():
         
         if save_registrants(registrants):
             # Add revenue entry
-            # Add revenue entry (save to disk immediately). Do NOT auto-push here;
-            # pushing should only happen when the user clicks the Push-to-GitHub button.
-            add_revenue_entry(name, group, gender, registration_date_iso)
+            # Determine clients override from form (comma-separated)
+            clients_raw = request.form.get('revenue_clients', '')
+            clients_list = [c.strip() for c in clients_raw.split(',')] if clients_raw else []
+            # Add revenue entry with the actual paid amount and chosen clients (save to disk immediately).
+            # Do NOT auto-push here; pushing should only happen when the user clicks the Push-to-GitHub button.
+            add_revenue_entry(name, group, gender, registration_date_iso, amount=paid, clients=clients_list)
             
             flash(f'Successfully added {name} with ID {registration_id}!', 'success')
             return redirect(url_for('index'))
@@ -410,7 +496,8 @@ def add_registrant():
     return render_template('add_registrant.html', 
                          GROUP_INFO=GROUP_INFO, 
                          GENDER_INFO=GENDER_INFO,
-                         TSHIRT_SIZES=TSHIRT_SIZES)
+                         TSHIRT_SIZES=TSHIRT_SIZES,
+                         CLIENT_MAPPINGS=CLIENT_MAPPINGS)
 
 
 @app.route('/api/next_registration_id')
@@ -539,6 +626,7 @@ def edit_registrant(registration_id):
     
     if request.method == 'POST':
         # Update registrant data
+        old_name = registrant.get('name', '')
         # Handle potential registration_id change
         new_registration_id = request.form.get('registration_id', '').strip()
         old_registration_id = registrant.get('registration_id', '')
@@ -633,16 +721,37 @@ def edit_registrant(registration_id):
         registrants[registrant_index] = registrant
         
         if save_registrants(registrants):
+            # Update revenue clients if provided
+            try:
+                clients_raw = request.form.get('revenue_clients', '')
+                clients_list = [c.strip() for c in clients_raw.split(',')] if clients_raw else []
+                if clients_list:
+                    update_revenue_clients_for_name(old_name, registrant['name'], clients_list)
+            except Exception as e:
+                print(f"Warning: couldn't update revenue clients: {e}")
             flash(f'Successfully updated {registrant["name"]}!', 'success')
             return redirect(url_for('index'))
         else:
             flash('Failed to save changes. Please try again.', 'error')
     
+    # Prefill revenue clients from revenues.json if present, else default mapping
+    prefill_clients = []
+    try:
+        entry, _ = find_latest_registration_revenue_by_name(registrant.get('name', ''))
+        if entry and isinstance(entry.get('clients'), list):
+            prefill_clients = [c for c in entry.get('clients') if isinstance(c, str)]
+    except Exception:
+        prefill_clients = []
+    if not prefill_clients:
+        prefill_clients = get_default_clients(registrant.get('group'), registrant.get('gender'))
+
     return render_template('edit_registrant.html', 
                          registrant=registrant,
                          GROUP_INFO=GROUP_INFO, 
                          GENDER_INFO=GENDER_INFO,
                          TSHIRT_SIZES=TSHIRT_SIZES,
+                         CLIENT_MAPPINGS=CLIENT_MAPPINGS,
+                         revenue_clients=", ".join(prefill_clients),
                          get_verification_url=get_verification_url)
 
 @app.route('/delete/<registration_id>', methods=['POST'])
