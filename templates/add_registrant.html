@@ -304,9 +304,9 @@ document.addEventListener('DOMContentLoaded', function() {
         'CO': '1202425030'  // Commerce
     };
 
-    // Default to Science prefix before group is selected
+    // Default to a prefix before group is selected
     if (rollInput && (!groupSelect.value || groupSelect.value === '')) {
-        rollInput.value = groupPrefixes['SC'];
+        rollInput.value = '12024250';
         // mark as auto-filled so we can safely overwrite when group changes
         rollInput.dataset.autofill = '1';
     }
@@ -505,12 +505,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function inferGroupFromRoll(roll) {
         // Science: 1202425010646 (1 after 1202425)
         // Arts:    1202425020646 (2 after 1202425)
-        // Commerce:12024250130646 (13 after 1202425)
+        // Commerce:1202425030646 (3 after 1202425)
         if (!roll || roll.length < 10) return '';
         let code = '';
         if (roll.startsWith('1202425')) {
             code = roll.substring(8);
-            if (code.startsWith('1') && !code.startsWith('13')) return 'SC';
+            if (code.startsWith('1')) return 'SC';
             if (code.startsWith('2')) return 'AR';
             if (code.startsWith('3')) return 'CO';
         }
