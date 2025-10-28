@@ -36,7 +36,7 @@ GENDER_INFO = {
 }
 
 # T-shirt size options (keep consistent across UI)
-TSHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+TSHIRT_SIZES = ['M','L','XL','XXL','3XL','4XL']
 
 # Client mappings for revenue tracking
 CLIENT_MAPPINGS = {
