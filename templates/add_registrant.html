@@ -419,6 +419,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Update registration ID preview after auto-filling group/gender
                 updateRegIdPreview();
+                // Also update revenue clients prefill when group/gender are set programmatically
+                updateRevenueClientsPrefill();
             } else {
                 // Update status for not found
                 if (studentStatus) {
@@ -569,6 +571,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             updateRegIdPreview();
+            // Keep revenue clients in sync when group inferred from roll
+            updateRevenueClientsPrefill();
         }
     }
 
@@ -835,6 +839,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     groupSelect.value = grpFromRoll;
                     fieldAutoFilled.group = true;
                     updateRegIdPreview();
+                    // When setting group programmatically during import, update revenue clients too
+                    updateRevenueClientsPrefill();
                     found.push('group');
                 }
             }
@@ -847,6 +853,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 groupSelect.value = inferredGroup;
                 fieldAutoFilled.group = true;
                 updateRegIdPreview();
+                updateRevenueClientsPrefill();
                 found.push('group');
             }
         }
