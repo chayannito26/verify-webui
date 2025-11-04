@@ -4,236 +4,234 @@
 
 {% block content %}
 <div class="fade-in">
-    <div class="max-w-2xl mx-auto">
+    <div class="w-full mx-auto">
         <!-- Header -->
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900">Add New Registrant</h1>
-            <p class="mt-2 text-sm text-gray-600">
-                Fill out the form below to add a new registrant to Chayannito 26.
-            </p>
         </div>
 
         <!-- Form -->
         <div class="bg-white shadow rounded-lg">
             <form method="POST" class="px-6 py-8">
-                <div class="grid grid-cols-1 gap-6">
-                    <!-- Roll Number and Student Image -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="lg:col-span-2">
-                            <label for="roll" class="block text-sm font-medium text-gray-700">
-                                Roll Number <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" 
-                                   name="roll" 
-                                   id="roll" 
-                                   required
-                                   value="{{ form_data.roll if form_data else '' }}"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                                   placeholder="e.g., 1202425010276">
-                        </div>
-                        
-                        <!-- Student Image Preview -->
-                        <div class="lg:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700">
-                                Student Photo
-                            </label>
-                            <div class="mt-1 flex justify-center">
-                                <img id="student-image" 
-                                     src="/api/student-image/placeholder" 
-                                     alt="Student photo" 
-                                     class="h-24 w-24 object-cover rounded-lg border-2 border-gray-300"
-                                     onerror="this.src='/api/student-image/placeholder'">
-                            </div>
-                            <p id="student-status" class="mt-1 text-xs text-gray-500 text-center">Enter roll number to see photo</p>
-                        </div>
+                <div class="flex gap-6">
+                <!-- Left Column: Main Registration Form -->
+                <div class="flex-1 space-y-4">
+                    <!-- Registration ID -->
+                    <div class="flex items-center">
+                        <label for="registration_id" class="text-sm font-medium text-gray-700 w-48">Registration ID:</label>
+                        <input type="text" id="registration_id" name="registration_id"
+                               value="{{ form_data.registration_id if form_data else '' }}"
+                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                               placeholder="AR-B-####" readonly />
                     </div>
 
                     <!-- Name -->
-                    <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700">
-                            Full Name <span class="text-red-500">*</span>
-                        </label>
+                    <div class="flex items-center">
+                        <label for="name" class="text-sm font-medium text-gray-700 w-48">Name: <span class="text-red-500">*</span></label>
                         <input type="text" 
                                name="name" 
                                id="name" 
                                required
                                value="{{ form_data.name if form_data else '' }}"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                                placeholder="Enter full name">
                     </div>
 
-                    <!-- Group and Gender in row -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <!-- Group -->
-                        <div>
-                            <label for="group" class="block text-sm font-medium text-gray-700">
-                                Group <span class="text-red-500">*</span>
-                            </label>
-                            <select name="group" 
-                                    id="group" 
-                                    required
-                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
-                                <option value="">Select Group</option>
-                                {% for code, info in GROUP_INFO.items() %}
-                                    <option value="{{ code }}" 
-                                            {% if form_data and form_data.group == code %}selected{% endif %}>
-                                        {{ info.emoji }} {{ info.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Gender -->
-                        <div>
-                            <label for="gender" class="block text-sm font-medium text-gray-700">
-                                Gender <span class="text-red-500">*</span>
-                            </label>
-                            <select name="gender" 
-                                    id="gender" 
-                                    required
-                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
-                                <option value="">Select Gender</option>
-                                {% for gender, info in GENDER_INFO.items() %}
-                                    <option value="{{ gender }}" 
-                                            {% if form_data and form_data.gender == gender %}selected{% endif %}>
-                                        {{ info.dot }} {{ gender }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Contact Information -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <!-- Email -->
-                        <div>
-                            <label for="email" class="block text-sm font-medium text-gray-700">
-                                Email Address
-                            </label>
-                            <input type="email" 
-                                   name="email" 
-                                   id="email"
-                                   value="{{ form_data.email if form_data else '' }}"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                                   placeholder="student@example.com">
-                        </div>
-
-                        <!-- Phone -->
-                        <div>
-                            <label for="phone" class="block text-sm font-medium text-gray-700">
-                                Phone Number
-                            </label>
-                            <input type="tel" 
-                                   name="phone" 
-                                   id="phone"
-                                   value="{{ form_data.phone if form_data else '' }}"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                                   placeholder="01XXXXXXXXX">
-                        </div>
-                    </div>
-
-                    <!-- Payment and Referral -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <!-- Payment Amount -->
-                        <div>
-                            <label for="paid" class="block text-sm font-medium text-gray-700">
-                                Payment Amount (৳)
-                            </label>
-                            <input type="number" 
-                                   name="paid" 
-                                   id="paid"
-                                   min="0"
-                                   value="{{ form_data.paid if form_data else '1200' }}"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                                   placeholder="1200">
-                        </div>
-
-                        <!-- Referred By -->
-                        <div>
-                            <label for="referred_by" class="block text-sm font-medium text-gray-700">
-                                Referred By
-                            </label>
+                    <!-- Roll Number -->
+                    <div class="flex items-center">
+                        <label for="roll" class="text-sm font-medium text-gray-700 w-48">Roll: <span class="text-red-500">*</span></label>
+                        <div class="flex-1 flex items-center">
+                            <span class="text-sm text-gray-500 font-mono bg-gray-100 px-3 py-2 rounded-l-md border border-r-0 border-gray-300">12024250</span>
                             <input type="text" 
-                                   name="referred_by" 
-                                   id="referred_by"
-                                   list="referred_by_list"
-                                   value="{{ form_data.referred_by if form_data else '' }}"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                                   placeholder="Registration ID or name">
-                            <datalist id="referred_by_list"></datalist>
-                            <p id="referral-help" class="mt-1 text-xs text-gray-500">Type to search by ID or name. Pick a match or keep free-text.</p>
+                                   name="roll_suffix" 
+                                   id="roll_suffix" 
+                                   required
+                                   value="{{ form_data.roll[8:] if form_data and form_data.roll else '' }}"
+                                   class="flex-1 border-gray-300 rounded-r-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                   placeholder="e.g., 10276">
+                            <input type="hidden" name="roll" id="roll" value="">
                         </div>
+                    </div>
+
+                    <!-- Phone -->
+                    <div class="flex items-center">
+                        <label for="phone" class="text-sm font-medium text-gray-700 w-48">Phone:</label>
+                        <input type="tel" 
+                               name="phone" 
+                               id="phone"
+                               value="{{ form_data.phone if form_data else '' }}"
+                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                               placeholder="01XXXXXXXXX">
+                    </div>
+
+                    <!-- Email -->
+                    <div class="flex items-center">
+                        <label for="email" class="text-sm font-medium text-gray-700 w-48">Email:</label>
+                        <div class="flex-1 flex items-center">
+                            <input type="text" 
+                                   name="email_prefix" 
+                                   id="email_prefix"
+                                   value="{{ form_data.email.replace('@gmail.com', '') if form_data and form_data.email else '' }}"
+                                   class="flex-1 border-gray-300 rounded-l-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                   placeholder="student">
+                            <span class="text-sm text-gray-500 font-mono bg-gray-100 px-3 py-2 rounded-r-md border border-l-0 border-gray-300">@gmail.com</span>
+                            <input type="hidden" name="email" id="email" value="">
+                        </div>
+                    </div>
+
+                    <!-- Referred By -->
+                    <div class="flex items-center">
+                        <label for="referred_by" class="text-sm font-medium text-gray-700 w-48">Refer:</label>
+                        <input type="text" 
+                               name="referred_by" 
+                               id="referred_by"
+                               list="referred_by_list"
+                               value="{{ form_data.referred_by if form_data else '' }}"
+                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                        <datalist id="referred_by_list"></datalist>
+                    </div>
+
+                    <!-- T-Shirt Size (Radio buttons) -->
+                    <div class="flex items-start">
+                        <label class="text-sm font-medium text-gray-700 w-48 pt-2">T-Shirt Size:</label>
+                        <div class="flex-1">
+                            <div class="flex space-x-2" id="tshirt-container">
+                                {% set tshirt_sizes_main = ['M', 'L', 'XL', 'XXL', '3XL'] %}
+                                {% for size in tshirt_sizes_main %}
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" 
+                                           name="tshirt_size" 
+                                           value="{{ size }}"
+                                           {% if form_data and form_data.get('tshirt_size') == size %}checked{% endif %}
+                                           class="hidden tshirt-radio">
+                                    <span class="tshirt-btn px-4 py-2 border-2 border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">{{ size }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Registration Fee -->
+                    <div class="flex items-center">
+                        <label for="paid" class="text-sm font-medium text-gray-700 w-48">Registration Fee (৳):</label>
+                        <input type="number" 
+                               name="paid" 
+                               id="paid"
+                               min="0"
+                               value="{{ form_data.paid if form_data else '1200' }}"
+                               class="flex-1 border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-xl font-bold text-blue-600"
+                               placeholder="1200">
+                    </div>
+
+                    <!-- Registration Date -->
+                    <div class="flex items-center">
+                        <label for="registration_date" class="text-sm font-medium text-gray-700 w-48">Registration Date:</label>
+                        <input type="date" 
+                               id="registration_date" 
+                               name="registration_date" 
+                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" />
                     </div>
 
                     <!-- Revenue Clients -->
-                    <div>
-                        <label for="revenue_clients" class="block text-sm font-medium text-gray-700">
-                            Revenue Client(s)
-                        </label>
+                    <div class="flex items-center">
+                        <label for="revenue_clients" class="text-sm font-medium text-gray-700 w-48">Revenue Client(s):</label>
                         <input type="text"
                                name="revenue_clients"
                                id="revenue_clients"
                                value="{{ form_data.revenue_clients if form_data else '' }}"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                               placeholder="Comma-separated names (auto-fills by Group + Gender)">
-                        <p class="mt-1 text-xs text-gray-500">Prefilled from default mapping for selected Group and Gender; you can change or add multiple separated by commas.</p>
+                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                               placeholder="Auto-filled by Group + Gender">
                     </div>
+                </div>
 
-                    <!-- Parts Available -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-3">
-                            Parts Available
-                        </label>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {% set available_parts = ['T-Shirt', 'Food', 'Gift'] %}
-                            {% for part in available_parts %}
-                                <label class="relative flex items-start">
-                                    <div class="flex items-center h-5">
-                                        <input type="checkbox" 
-                                               name="parts_available" 
-                                               value="{{ part }}"
-                                               {% if form_data and part in form_data.getlist('parts_available') %}checked{% elif not form_data %}checked{% endif %}
-                                               class="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300 rounded">
-                                    </div>
-                                    <div class="ml-3 text-sm">
-                                        <span class="font-medium text-gray-700">{{ part }}</span>
-                                    </div>
+                <!-- Right Column: Additional Fields Section -->
+                <div class="w-96">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
+                    <div class="space-y-6">
+                        <!-- Student Identity Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                            <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Student Identity</h4>
+                            
+                            <!-- Group -->
+                            <div>
+                                <label for="group" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Group <span class="text-red-500">*</span>
                                 </label>
-                            {% endfor %}
+                                <select name="group" 
+                                        id="group" 
+                                        required
+                                        class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                                    <option value="">Select Group</option>
+                                    {% for code, info in GROUP_INFO.items() %}
+                                        <option value="{{ code }}" 
+                                                {% if form_data and form_data.group == code %}selected{% endif %}>
+                                            {{ info.emoji }} {{ info.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Gender -->
+                            <div>
+                                <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Gender <span class="text-red-500">*</span>
+                                </label>
+                                <select name="gender" 
+                                        id="gender" 
+                                        required
+                                        class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                                    <option value="">Select Gender</option>
+                                    {% for gender, info in GENDER_INFO.items() %}
+                                        <option value="{{ gender }}" 
+                                                {% if form_data and form_data.gender == gender %}selected{% endif %}>
+                                            {{ info.dot }} {{ gender }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Student Image Preview -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Student Photo
+                                </label>
+                                <div class="flex justify-center">
+                                    <img id="student-image" 
+                                         src="/api/student-image/placeholder" 
+                                         alt="Student photo" 
+                                         class="h-32 w-32 object-cover rounded-lg border-2 border-gray-300 shadow-sm"
+                                         onerror="this.src='/api/student-image/placeholder'">
+                                </div>
+                                <p id="student-status" class="mt-2 text-xs text-gray-500 text-center">Enter roll number to see photo</p>
+                            </div>
                         </div>
 
-                        <!-- T-Shirt Size (conditional) -->
-                        <div id="tshirt-size-wrapper" class="mt-4 hidden">
-                            <label for="tshirt_size" class="block text-sm font-medium text-gray-700">
-                                T-Shirt Size
-                            </label>
-                            <select name="tshirt_size" id="tshirt_size" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
-                                <option value="">Select size</option>
-                                {% for size in TSHIRT_SIZES %}
-                                <option value="{{ size }}" {% if form_data and form_data.get('tshirt_size') == size %}selected{% endif %}>{{ size }}</option>
-                                {% endfor %}
-                            </select>
-                            <p class="mt-1 text-xs text-gray-500">Shown only when T-Shirt is selected above.</p>
+                        <!-- Registration Details Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                            <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Registration Details</h4>
+                            
+                            <!-- Parts Available -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Parts Available
+                                </label>
+                                <div class="space-y-2">
+                                    {% set available_parts = ['T-Shirt', 'Food', 'Gift'] %}
+                                    {% for part in available_parts %}
+                                        <label class="flex items-center">
+                                            <input type="checkbox" 
+                                                   name="parts_available" 
+                                                   value="{{ part }}"
+                                                   {% if form_data and part in form_data.getlist('parts_available') %}checked{% elif not form_data %}checked{% endif %}
+                                                   class="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300 rounded">
+                                            <span class="ml-3 text-sm text-gray-700">{{ part }}</span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Auto-generated fields preview -->
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h3 class="text-sm font-medium text-gray-700 mb-2">Auto-generated Information</h3>
-                        <div class="text-sm text-gray-600 space-y-1">
-                            <label for="registration_date"><strong>Registration Date:</strong></label>
-                            <input type="date" id="registration_date" name="registration_date" class="border-gray-300 rounded-md px-2 py-1 focus:ring-emerald-500 focus:border-emerald-500" />
-                            <p class="flex items-center gap-2"><strong>Registration ID:</strong>
-                                <!-- Editable but visually minimal input to show generated ID. This input will be
-                                     automatically replaced with the server-generated ID whenever group or gender
-                                     changes (user edits are discarded on change as requested). -->
-                                <input type="text" id="registration_id" name="registration_id"
-                                       value="{{ form_data.registration_id if form_data else '' }}"
-                                       class="ml-2 bg-transparent text-sm font-mono text-gray-800 focus:outline-none"
-                                       placeholder="AR-B-####" />
-                            </p>
-                        </div>
-                    </div>
+                </div>
                 </div>
 
                 <!-- Import from text (paste) -->
@@ -270,6 +268,32 @@
     </div>
 </div>
 
+<style>
+    /* Default state - blue for male, pink for female */
+    .tshirt-btn {
+        color: #3b82f6; /* blue for male by default */
+    }
+    
+    .tshirt-btn.female-style {
+        color: #ec4899; /* pink for female */
+    }
+    
+    /* Checked state - filled blue for male, filled pink for female */
+    .tshirt-radio:checked + .tshirt-btn {
+        background-color: #3b82f6; /* blue fill for male */
+        border-color: #3b82f6;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .tshirt-radio:checked + .tshirt-btn.female-style {
+        background-color: #ec4899; /* pink fill for female */
+        border-color: #ec4899;
+        color: white;
+        font-weight: 600;
+    }
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Expose server-side client mappings to JS
@@ -286,6 +310,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Roll prefix logic
     const rollInput = document.getElementById('roll');
+    const rollSuffixInput = document.getElementById('roll_suffix');
+    const emailInput = document.getElementById('email');
+    const emailPrefixInput = document.getElementById('email_prefix');
     const nameInput = document.getElementById('name');
     const groupSelect = document.getElementById('group');
     const genderSelect = document.getElementById('gender');
@@ -293,10 +320,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const registrationIdInput = document.getElementById('registration_id');
     const studentImage = document.getElementById('student-image');
     const studentStatus = document.getElementById('student-status');
-    const tshirtSizeWrapper = document.getElementById('tshirt-size-wrapper');
     const referredByInput = document.getElementById('referred_by');
     const referredByList = document.getElementById('referred_by_list');
     const revenueClientsInput = document.getElementById('revenue_clients');
+    
+    // Sync roll_suffix to roll hidden field
+    function updateRollField() {
+        if (rollInput && rollSuffixInput) {
+            rollInput.value = '12024250' + rollSuffixInput.value;
+        }
+    }
+    
+    // Sync email_prefix to email hidden field
+    function updateEmailField() {
+        if (emailInput && emailPrefixInput) {
+            emailInput.value = emailPrefixInput.value ? emailPrefixInput.value + '@gmail.com' : '';
+        }
+    }
+    
+    // Update T-shirt button colors based on gender
+    function updateTshirtColors() {
+        const gender = genderSelect.value;
+        const tshirtBtns = document.querySelectorAll('.tshirt-btn');
+        tshirtBtns.forEach(btn => {
+            if (gender === 'Female') {
+                btn.classList.add('female-style');
+            } else {
+                btn.classList.remove('female-style');
+            }
+        });
+    }
+    
+    if (rollSuffixInput) {
+        rollSuffixInput.addEventListener('input', updateRollField);
+        updateRollField(); // Initialize
+    }
+    
+    if (emailPrefixInput) {
+        emailPrefixInput.addEventListener('input', updateEmailField);
+        updateEmailField(); // Initialize
+    }
+    
+    if (genderSelect) {
+        genderSelect.addEventListener('change', updateTshirtColors);
+        updateTshirtColors(); // Initialize
+    }
 
     // Track which fields have been manually edited vs auto-filled
     const fieldEditState = {
@@ -321,10 +389,9 @@ document.addEventListener('DOMContentLoaded', function() {
         'CO': '1202425030'  // Commerce
     };
 
-    // Default to a prefix before group is selected
-    if (rollInput && (!groupSelect.value || groupSelect.value === '')) {
+    // Initialize roll with fixed prefix
+    if (rollInput) {
         rollInput.value = '12024250';
-        // mark as auto-filled so we can safely overwrite when group changes
         rollInput.dataset.autofill = '1';
     }
 
@@ -403,6 +470,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!fieldEditState.gender && (genderSelect && (!genderSelect.value || fieldAutoFilled.gender))) {
                     genderSelect.value = data.student.gender;
                     fieldAutoFilled.gender = true;
+                    // Update T-shirt colors when gender is auto-filled
+                    updateTshirtColors();
                 }
                 
                 // Only set group if the API returned a non-empty group value. This avoids clearing
@@ -578,8 +647,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     genderSelect.addEventListener('change', updateRegIdPreview);
     genderSelect.addEventListener('change', updateRevenueClientsPrefill);
-    if (rollInput) {
-        rollInput.addEventListener('input', function() {
+    if (rollSuffixInput) {
+        rollSuffixInput.addEventListener('input', function() {
+            updateRollField();
             updateGroupFromRoll();
             debouncedFetchStudentData(rollInput.value.trim());
         });
@@ -790,8 +860,11 @@ document.addEventListener('DOMContentLoaded', function() {
             found.push('name');
         }
         if (email) {
-            const emailInput = document.getElementById('email');
-            if (emailInput && !emailInput.value.trim()) emailInput.value = email;
+            if (emailPrefixInput && !emailPrefixInput.value.trim()) {
+                // Remove @gmail.com if present
+                emailPrefixInput.value = email.replace('@gmail.com', '').replace(/@.*$/, '');
+                updateEmailField();
+            }
             found.push('email');
         }
         if (phone) {
@@ -802,20 +875,26 @@ document.addEventListener('DOMContentLoaded', function() {
             found.push('phone');
         }
         if (tshirt) {
-            const tshirtInput = document.getElementById('tshirt_size');
-            if (tshirtInput) {
-                tshirtInput.value = tshirt;
-                // ensure T-Shirt checkbox is checked
-                document.querySelectorAll('input[name="parts_available"]').forEach(cb => {
-                    if (cb.value === 'T-Shirt') cb.checked = true;
-                });
-                updateTshirtVisibility();
-            }
+            // Select the matching radio button
+            const tshirtRadios = document.querySelectorAll('input[name="tshirt_size"]');
+            tshirtRadios.forEach(radio => {
+                if (radio.value === tshirt) {
+                    radio.checked = true;
+                }
+            });
+            // ensure T-Shirt checkbox is checked
+            document.querySelectorAll('input[name="parts_available"]').forEach(cb => {
+                if (cb.value === 'T-Shirt') cb.checked = true;
+            });
             found.push('tshirt');
         }
         if (roll) {
             rollInput.value = roll;
             rollInput.dataset.autofill = '1';
+            // Update suffix input
+            if (rollSuffixInput && roll.startsWith('12024250')) {
+                rollSuffixInput.value = roll.substring(8);
+            }
 
             // Trigger same student lookup that runs when roll is edited (loads image/status)
             try {
@@ -880,22 +959,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    // Show/hide T-shirt size based on checkbox
-    function updateTshirtVisibility() {
-        const checkboxes = document.querySelectorAll('input[name="parts_available"]');
-        let tshirtSelected = false;
-        checkboxes.forEach(cb => {
-            if (cb.value === 'T-Shirt' && cb.checked) tshirtSelected = true;
-        });
-        if (tshirtSizeWrapper) {
-            tshirtSizeWrapper.classList.toggle('hidden', !tshirtSelected);
-        }
-    }
-    document.querySelectorAll('input[name="parts_available"]').forEach(cb => {
-        cb.addEventListener('change', updateTshirtVisibility);
-    });
-    // Initial state
-    updateTshirtVisibility();
 });
 </script>
 {% endblock %}
