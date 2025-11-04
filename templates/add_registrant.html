@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="fade-in">
-    <div class="max-w-2xl mx-auto">
+    <div class="w-full mx-auto">
         <!-- Header -->
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900">Add New Registrant</h1>
@@ -16,8 +16,9 @@
         <!-- Form -->
         <div class="bg-white shadow rounded-lg">
             <form method="POST" class="px-6 py-8">
-                <!-- Main Registration Form -->
-                <div class="space-y-4">
+                <div class="flex gap-6">
+                <!-- Left Column: Main Registration Form -->
+                <div class="flex-1 space-y-4">
                     <!-- Registration ID -->
                     <div class="flex items-center">
                         <label for="registration_id" class="text-sm font-medium text-gray-700 w-48">Registration ID:</label>
@@ -42,13 +43,17 @@
                     <!-- Roll Number -->
                     <div class="flex items-center">
                         <label for="roll" class="text-sm font-medium text-gray-700 w-48">Roll: <span class="text-red-500">*</span></label>
-                        <input type="text" 
-                               name="roll" 
-                               id="roll" 
-                               required
-                               value="{{ form_data.roll if form_data else '' }}"
-                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                               placeholder="e.g., 1202425010276">
+                        <div class="flex-1 flex items-center">
+                            <span class="text-sm text-gray-500 font-mono bg-gray-100 px-3 py-2 rounded-l-md border border-r-0 border-gray-300">12024250</span>
+                            <input type="text" 
+                                   name="roll_suffix" 
+                                   id="roll_suffix" 
+                                   required
+                                   value="{{ form_data.roll[8:] if form_data and form_data.roll else '' }}"
+                                   class="flex-1 border-gray-300 rounded-r-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                   placeholder="e.g., 10276">
+                            <input type="hidden" name="roll" id="roll" value="">
+                        </div>
                     </div>
 
                     <!-- Phone -->
@@ -65,12 +70,16 @@
                     <!-- Email -->
                     <div class="flex items-center">
                         <label for="email" class="text-sm font-medium text-gray-700 w-48">Email:</label>
-                        <input type="email" 
-                               name="email" 
-                               id="email"
-                               value="{{ form_data.email if form_data else '' }}"
-                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                               placeholder="student@example.com">
+                        <div class="flex-1 flex items-center">
+                            <input type="text" 
+                                   name="email_prefix" 
+                                   id="email_prefix"
+                                   value="{{ form_data.email.replace('@gmail.com', '') if form_data and form_data.email else '' }}"
+                                   class="flex-1 border-gray-300 rounded-l-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                   placeholder="student">
+                            <span class="text-sm text-gray-500 font-mono bg-gray-100 px-3 py-2 rounded-r-md border border-l-0 border-gray-300">@gmail.com</span>
+                            <input type="hidden" name="email" id="email" value="">
+                        </div>
                     </div>
 
                     <!-- Referred By -->
@@ -81,17 +90,15 @@
                                id="referred_by"
                                list="referred_by_list"
                                value="{{ form_data.referred_by if form_data else '' }}"
-                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                               placeholder="Registration ID or name">
+                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
                         <datalist id="referred_by_list"></datalist>
                     </div>
-                    <p id="referral-help" class="text-xs text-gray-500 ml-48">Type to search by ID or name. Pick a match or keep free-text.</p>
 
                     <!-- T-Shirt Size (Radio buttons) -->
                     <div class="flex items-start">
                         <label class="text-sm font-medium text-gray-700 w-48 pt-2">T-Shirt Size:</label>
                         <div class="flex-1">
-                            <div class="flex space-x-2">
+                            <div class="flex space-x-2" id="tshirt-container">
                                 {% set tshirt_sizes_main = ['M', 'L', 'XL', 'XXL', '3XL'] %}
                                 {% for size in tshirt_sizes_main %}
                                 <label class="inline-flex items-center cursor-pointer">
@@ -100,7 +107,7 @@
                                            value="{{ size }}"
                                            {% if form_data and form_data.get('tshirt_size') == size %}checked{% endif %}
                                            class="hidden tshirt-radio">
-                                    <span class="tshirt-btn px-4 py-2 border-2 border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">{{ size }}</span>
+                                    <span class="tshirt-btn px-4 py-2 border-2 border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">{{ size }}</span>
                                 </label>
                                 {% endfor %}
                             </div>
@@ -120,21 +127,23 @@
                     </div>
                 </div>
 
-                <!-- Additional Fields Section -->
-                <div class="mt-8 pt-6 border-t border-gray-200">
+                <!-- Right Column: Additional Fields Section -->
+                <div class="w-96">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
-                    <div class="grid grid-cols-1 gap-6">
-                        <!-- Group and Gender in row -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-6">
+                        <!-- Student Identity Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                            <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Student Identity</h4>
+                            
                             <!-- Group -->
                             <div>
-                                <label for="group" class="block text-sm font-medium text-gray-700">
+                                <label for="group" class="block text-sm font-medium text-gray-700 mb-1">
                                     Group <span class="text-red-500">*</span>
                                 </label>
                                 <select name="group" 
                                         id="group" 
                                         required
-                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                                        class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
                                     <option value="">Select Group</option>
                                     {% for code, info in GROUP_INFO.items() %}
                                         <option value="{{ code }}" 
@@ -147,13 +156,13 @@
 
                             <!-- Gender -->
                             <div>
-                                <label for="gender" class="block text-sm font-medium text-gray-700">
+                                <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">
                                     Gender <span class="text-red-500">*</span>
                                 </label>
                                 <select name="gender" 
                                         id="gender" 
                                         required
-                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                                        class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
                                     <option value="">Select Gender</option>
                                     {% for gender, info in GENDER_INFO.items() %}
                                         <option value="{{ gender }}" 
@@ -163,70 +172,79 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                        </div>
 
-                        <!-- Student Image Preview -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">
-                                Student Photo
-                            </label>
-                            <div class="mt-1 flex justify-start">
-                                <img id="student-image" 
-                                     src="/api/student-image/placeholder" 
-                                     alt="Student photo" 
-                                     class="h-24 w-24 object-cover rounded-lg border-2 border-gray-300"
-                                     onerror="this.src='/api/student-image/placeholder'">
+                            <!-- Student Image Preview -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Student Photo
+                                </label>
+                                <div class="flex justify-center">
+                                    <img id="student-image" 
+                                         src="/api/student-image/placeholder" 
+                                         alt="Student photo" 
+                                         class="h-32 w-32 object-cover rounded-lg border-2 border-gray-300 shadow-sm"
+                                         onerror="this.src='/api/student-image/placeholder'">
+                                </div>
+                                <p id="student-status" class="mt-2 text-xs text-gray-500 text-center">Enter roll number to see photo</p>
                             </div>
-                            <p id="student-status" class="mt-1 text-xs text-gray-500">Enter roll number to see photo</p>
                         </div>
 
-                        <!-- Revenue Clients -->
-                        <div>
-                            <label for="revenue_clients" class="block text-sm font-medium text-gray-700">
-                                Revenue Client(s)
-                            </label>
-                            <input type="text"
-                                   name="revenue_clients"
-                                   id="revenue_clients"
-                                   value="{{ form_data.revenue_clients if form_data else '' }}"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                                   placeholder="Comma-separated names (auto-fills by Group + Gender)">
-                            <p class="mt-1 text-xs text-gray-500">Prefilled from default mapping for selected Group and Gender; you can change or add multiple separated by commas.</p>
-                        </div>
+                        <!-- Registration Details Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                            <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Registration Details</h4>
+                            
+                            <!-- Registration Date -->
+                            <div>
+                                <label for="registration_date" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Registration Date
+                                </label>
+                                <input type="date" 
+                                       id="registration_date" 
+                                       name="registration_date" 
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm" />
+                            </div>
 
-                        <!-- Parts Available -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-3">
-                                Parts Available
-                            </label>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                {% set available_parts = ['T-Shirt', 'Food', 'Gift'] %}
-                                {% for part in available_parts %}
-                                    <label class="relative flex items-start">
-                                        <div class="flex items-center h-5">
+                            <!-- Parts Available -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Parts Available
+                                </label>
+                                <div class="space-y-2">
+                                    {% set available_parts = ['T-Shirt', 'Food', 'Gift'] %}
+                                    {% for part in available_parts %}
+                                        <label class="flex items-center">
                                             <input type="checkbox" 
                                                    name="parts_available" 
                                                    value="{{ part }}"
                                                    {% if form_data and part in form_data.getlist('parts_available') %}checked{% elif not form_data %}checked{% endif %}
                                                    class="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300 rounded">
-                                        </div>
-                                        <div class="ml-3 text-sm">
-                                            <span class="font-medium text-gray-700">{{ part }}</span>
-                                        </div>
-                                    </label>
-                                {% endfor %}
+                                            <span class="ml-3 text-sm text-gray-700">{{ part }}</span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Auto-generated fields preview -->
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <h3 class="text-sm font-medium text-gray-700 mb-2">Auto-generated Information</h3>
-                            <div class="text-sm text-gray-600 space-y-1">
-                                <label for="registration_date"><strong>Registration Date:</strong></label>
-                                <input type="date" id="registration_date" name="registration_date" class="border-gray-300 rounded-md px-2 py-1 focus:ring-emerald-500 focus:border-emerald-500" />
+                        <!-- Financial Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                            <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Financial Details</h4>
+                            
+                            <!-- Revenue Clients -->
+                            <div>
+                                <label for="revenue_clients" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Revenue Client(s)
+                                </label>
+                                <input type="text"
+                                       name="revenue_clients"
+                                       id="revenue_clients"
+                                       value="{{ form_data.revenue_clients if form_data else '' }}"
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                       placeholder="Auto-filled by Group + Gender">
+                                <p class="mt-1 text-xs text-gray-500">Auto-filled based on Group and Gender selection. You can modify or add multiple names separated by commas.</p>
                             </div>
                         </div>
                     </div>
+                </div>
                 </div>
 
                 <!-- Import from text (paste) -->
@@ -264,10 +282,27 @@
 </div>
 
 <style>
+    /* Default state - blue for male, pink for female */
+    .tshirt-btn {
+        color: #3b82f6; /* blue for male by default */
+    }
+    
+    .tshirt-btn.female-style {
+        color: #ec4899; /* pink for female */
+    }
+    
+    /* Checked state - filled blue for male, filled pink for female */
     .tshirt-radio:checked + .tshirt-btn {
-        background-color: white;
-        border-color: #10b981;
-        color: #10b981;
+        background-color: #3b82f6; /* blue fill for male */
+        border-color: #3b82f6;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .tshirt-radio:checked + .tshirt-btn.female-style {
+        background-color: #ec4899; /* pink fill for female */
+        border-color: #ec4899;
+        color: white;
         font-weight: 600;
     }
 </style>
@@ -288,6 +323,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Roll prefix logic
     const rollInput = document.getElementById('roll');
+    const rollSuffixInput = document.getElementById('roll_suffix');
+    const emailInput = document.getElementById('email');
+    const emailPrefixInput = document.getElementById('email_prefix');
     const nameInput = document.getElementById('name');
     const groupSelect = document.getElementById('group');
     const genderSelect = document.getElementById('gender');
@@ -298,6 +336,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const referredByInput = document.getElementById('referred_by');
     const referredByList = document.getElementById('referred_by_list');
     const revenueClientsInput = document.getElementById('revenue_clients');
+    
+    // Sync roll_suffix to roll hidden field
+    function updateRollField() {
+        if (rollInput && rollSuffixInput) {
+            rollInput.value = '12024250' + rollSuffixInput.value;
+        }
+    }
+    
+    // Sync email_prefix to email hidden field
+    function updateEmailField() {
+        if (emailInput && emailPrefixInput) {
+            emailInput.value = emailPrefixInput.value ? emailPrefixInput.value + '@gmail.com' : '';
+        }
+    }
+    
+    // Update T-shirt button colors based on gender
+    function updateTshirtColors() {
+        const gender = genderSelect.value;
+        const tshirtBtns = document.querySelectorAll('.tshirt-btn');
+        tshirtBtns.forEach(btn => {
+            if (gender === 'Female') {
+                btn.classList.add('female-style');
+            } else {
+                btn.classList.remove('female-style');
+            }
+        });
+    }
+    
+    if (rollSuffixInput) {
+        rollSuffixInput.addEventListener('input', updateRollField);
+        updateRollField(); // Initialize
+    }
+    
+    if (emailPrefixInput) {
+        emailPrefixInput.addEventListener('input', updateEmailField);
+        updateEmailField(); // Initialize
+    }
+    
+    if (genderSelect) {
+        genderSelect.addEventListener('change', updateTshirtColors);
+        updateTshirtColors(); // Initialize
+    }
 
     // Track which fields have been manually edited vs auto-filled
     const fieldEditState = {
@@ -322,10 +402,9 @@ document.addEventListener('DOMContentLoaded', function() {
         'CO': '1202425030'  // Commerce
     };
 
-    // Default to a prefix before group is selected
-    if (rollInput && (!groupSelect.value || groupSelect.value === '')) {
+    // Initialize roll with fixed prefix
+    if (rollInput) {
         rollInput.value = '12024250';
-        // mark as auto-filled so we can safely overwrite when group changes
         rollInput.dataset.autofill = '1';
     }
 
@@ -579,8 +658,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     genderSelect.addEventListener('change', updateRegIdPreview);
     genderSelect.addEventListener('change', updateRevenueClientsPrefill);
-    if (rollInput) {
-        rollInput.addEventListener('input', function() {
+    if (rollSuffixInput) {
+        rollSuffixInput.addEventListener('input', function() {
+            updateRollField();
             updateGroupFromRoll();
             debouncedFetchStudentData(rollInput.value.trim());
         });
@@ -791,8 +871,11 @@ document.addEventListener('DOMContentLoaded', function() {
             found.push('name');
         }
         if (email) {
-            const emailInput = document.getElementById('email');
-            if (emailInput && !emailInput.value.trim()) emailInput.value = email;
+            if (emailPrefixInput && !emailPrefixInput.value.trim()) {
+                // Remove @gmail.com if present
+                emailPrefixInput.value = email.replace('@gmail.com', '').replace(/@.*$/, '');
+                updateEmailField();
+            }
             found.push('email');
         }
         if (phone) {
@@ -819,6 +902,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (roll) {
             rollInput.value = roll;
             rollInput.dataset.autofill = '1';
+            // Update suffix input
+            if (rollSuffixInput && roll.startsWith('12024250')) {
+                rollSuffixInput.value = roll.substring(8);
+            }
 
             // Trigger same student lookup that runs when roll is edited (loads image/status)
             try {

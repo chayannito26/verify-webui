@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="fade-in">
-    <div class="max-w-2xl mx-auto">
+    <div class="w-full mx-auto">
         <!-- Header -->
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900">Edit Registrant</h1>
@@ -16,8 +16,9 @@
         <!-- Form -->
         <div class="bg-white shadow rounded-lg">
             <form method="POST" class="px-6 py-8">
-                <!-- Main Registration Form -->
-                <div class="space-y-4">
+                <div class="flex gap-6">
+                <!-- Left Column: Main Registration Form -->
+                <div class="flex-1 space-y-4">
                     <!-- Registration ID -->
                     <div class="flex items-center">
                         <label for="registration_id" class="text-sm font-medium text-gray-700 w-48">Registration ID:</label>
@@ -27,7 +28,6 @@
                                value="{{ registrant.registration_id }}"
                                class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
                     </div>
-                    <p class="text-xs text-gray-500 ml-48">You can change the registration ID here. Ensure it remains unique and follows the format e.g. <code>AR-B-0001</code>.</p>
 
                     <!-- Name -->
                     <div class="flex items-center">
@@ -43,12 +43,16 @@
                     <!-- Roll Number -->
                     <div class="flex items-center">
                         <label for="roll" class="text-sm font-medium text-gray-700 w-48">Roll: <span class="text-red-500">*</span></label>
-                        <input type="text" 
-                               name="roll" 
-                               id="roll" 
-                               required
-                               value="{{ registrant.roll }}"
-                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                        <div class="flex-1 flex items-center">
+                            <span class="text-sm text-gray-500 font-mono bg-gray-100 px-3 py-2 rounded-l-md border border-r-0 border-gray-300">12024250</span>
+                            <input type="text" 
+                                   name="roll_suffix" 
+                                   id="roll_suffix" 
+                                   required
+                                   value="{{ registrant.roll[8:] if registrant.roll and registrant.roll|length > 8 else registrant.roll }}"
+                                   class="flex-1 border-gray-300 rounded-r-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                            <input type="hidden" name="roll" id="roll" value="{{ registrant.roll }}">
+                        </div>
                     </div>
 
                     <!-- Phone -->
@@ -64,11 +68,15 @@
                     <!-- Email -->
                     <div class="flex items-center">
                         <label for="email" class="text-sm font-medium text-gray-700 w-48">Email:</label>
-                        <input type="email" 
-                               name="email" 
-                               id="email"
-                               value="{{ registrant.email or '' }}"
-                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                        <div class="flex-1 flex items-center">
+                            <input type="text" 
+                                   name="email_prefix" 
+                                   id="email_prefix"
+                                   value="{{ (registrant.email or '').replace('@gmail.com', '') if registrant.email else '' }}"
+                                   class="flex-1 border-gray-300 rounded-l-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                            <span class="text-sm text-gray-500 font-mono bg-gray-100 px-3 py-2 rounded-r-md border border-l-0 border-gray-300">@gmail.com</span>
+                            <input type="hidden" name="email" id="email" value="{{ registrant.email or '' }}">
+                        </div>
                     </div>
 
                     <!-- Referred By -->
@@ -78,15 +86,14 @@
                                name="referred_by" 
                                id="referred_by"
                                value="{{ registrant.referred_by or '' }}"
-                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                               placeholder="Registration ID or name">
+                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
                     </div>
 
                     <!-- T-Shirt Size (Radio buttons) -->
                     <div class="flex items-start">
                         <label class="text-sm font-medium text-gray-700 w-48 pt-2">T-Shirt Size:</label>
                         <div class="flex-1">
-                            <div class="flex space-x-2">
+                            <div class="flex space-x-2" id="tshirt-container">
                                 {% set tshirt_sizes_main = ['M', 'L', 'XL', 'XXL', '3XL'] %}
                                 {% for size in tshirt_sizes_main %}
                                 <label class="inline-flex items-center cursor-pointer">
@@ -95,7 +102,7 @@
                                            value="{{ size }}"
                                            {% if (registrant.tshirt_size or '') == size %}checked{% endif %}
                                            class="hidden tshirt-radio">
-                                    <span class="tshirt-btn px-4 py-2 border-2 border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">{{ size }}</span>
+                                    <span class="tshirt-btn px-4 py-2 border-2 border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">{{ size }}</span>
                                 </label>
                                 {% endfor %}
                             </div>
@@ -115,132 +122,149 @@
                     </div>
                 </div>
 
-                <!-- Additional Fields Section -->
-                <div class="mt-8 pt-6 border-t border-gray-200">
+                <!-- Right Column: Additional Fields Section -->
+                <div class="w-96">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
-                    <div class="grid grid-cols-1 gap-6">
-                        <!-- Gender -->
-                        <div>
-                            <label for="gender" class="block text-sm font-medium text-gray-700">
-                                Gender <span class="text-red-500">*</span>
-                            </label>
-                            <select name="gender" 
-                                    id="gender" 
-                                    required
-                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
-                                {% for gender, info in GENDER_INFO.items() %}
-                                    <option value="{{ gender }}" 
-                                            {% if registrant.gender == gender %}selected{% endif %}>
-                                        {{ info.dot }} {{ gender }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <!-- Student Image Preview -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">
-                                Student Photo
-                            </label>
-                            <div class="mt-1 flex justify-start">
-                                <img id="student-image" 
-                                     src="/api/student-image/{{ registrant.roll }}" 
-                                     alt="Student photo" 
-                                     class="h-24 w-24 object-cover rounded-lg border-2 border-gray-300"
-                                     onerror="this.src='/api/student-image/placeholder'">
+                    <div class="space-y-6">
+                        <!-- Student Identity Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                            <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Student Identity</h4>
+                            
+                            <!-- Gender -->
+                            <div>
+                                <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Gender <span class="text-red-500">*</span>
+                                </label>
+                                <select name="gender" 
+                                        id="gender" 
+                                        required
+                                        class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+                                    {% for gender, info in GENDER_INFO.items() %}
+                                        <option value="{{ gender }}" 
+                                                {% if registrant.gender == gender %}selected{% endif %}>
+                                            {{ info.dot }} {{ gender }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
                             </div>
-                            <p id="student-status" class="mt-1 text-xs text-gray-500">Current student photo</p>
+
+                            <!-- Student Image Preview -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Student Photo
+                                </label>
+                                <div class="flex justify-center">
+                                    <img id="student-image" 
+                                         src="/api/student-image/{{ registrant.roll }}" 
+                                         alt="Student photo" 
+                                         class="h-32 w-32 object-cover rounded-lg border-2 border-gray-300 shadow-sm"
+                                         onerror="this.src='/api/student-image/placeholder'">
+                                </div>
+                                <p id="student-status" class="mt-2 text-xs text-gray-500 text-center">Current student photo</p>
+                            </div>
+
+                            <!-- Photo URL -->
+                            <div>
+                                <label for="photo" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Photo URL
+                                </label>
+                                <input type="url" 
+                                       name="photo" 
+                                       id="photo"
+                                       value="{{ registrant.photo or '' }}"
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                       placeholder="https://example.com/photo.jpg">
+                                <p class="mt-1 text-xs text-gray-500">Leave empty for default photo</p>
+                            </div>
                         </div>
 
-                        <!-- Revenue Clients -->
-                        <div>
-                            <label for="revenue_clients" class="block text-sm font-medium text-gray-700">
-                                Revenue Client(s)
-                            </label>
-                            <input type="text" 
-                                   name="revenue_clients" 
-                                   id="revenue_clients"
-                                   value="{{ revenue_clients or '' }}"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                                   placeholder="Comma-separated names (default based on Group + Gender)">
-                            <p class="mt-1 text-xs text-gray-500">This updates the clients array for the registration fee in revenues. Leave as-is to keep current/default.</p>
-                        </div>
+                        <!-- Registration Details Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                            <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Registration Details</h4>
+                            
+                            <!-- Registration Date -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Registration Date
+                                </label>
+                                <p class="text-sm text-gray-600">{{ registrant.registration_date }}</p>
+                            </div>
+                            
+                            <!-- Verification URL -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Verification URL
+                                </label>
+                                <a href="{{ get_verification_url(registrant.registration_id) }}" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   class="text-sm text-emerald-600 hover:text-emerald-700 underline break-all">
+                                    View Page
+                                </a>
+                            </div>
 
-                        <!-- Photo URL -->
-                        <div>
-                            <label for="photo" class="block text-sm font-medium text-gray-700">
-                                Photo URL
-                            </label>
-                            <input type="url" 
-                                   name="photo" 
-                                   id="photo"
-                                   value="{{ registrant.photo or '' }}"
-                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                                   placeholder="https://example.com/photo.jpg">
-                            <p class="mt-1 text-xs text-gray-500">Leave empty to use default photo based on roll number</p>
-                        </div>
-
-                        <!-- Parts Available -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-3">
-                                Parts Available
-                            </label>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                {% set available_parts = ['T-Shirt', 'Food', 'Gift'] %}
-                                {% for part in available_parts %}
-                                    <label class="relative flex items-start">
-                                        <div class="flex items-center h-5">
+                            <!-- Parts Available -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Parts Available
+                                </label>
+                                <div class="space-y-2">
+                                    {% set available_parts = ['T-Shirt', 'Food', 'Gift'] %}
+                                    {% for part in available_parts %}
+                                        <label class="flex items-center">
                                             <input type="checkbox" 
                                                    name="parts_available" 
                                                    value="{{ part }}"
                                                    {% if part in (registrant.parts_available or []) %}checked{% endif %}
                                                    class="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300 rounded">
-                                        </div>
-                                        <div class="ml-3 text-sm">
-                                            <span class="font-medium text-gray-700">{{ part }}</span>
-                                        </div>
-                                    </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <!-- Revoke Registration -->
-                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                            <div class="flex items-start">
-                                <div class="flex items-center h-5">
-                                    <input type="checkbox" 
-                                           name="revoked" 
-                                           id="revoked"
-                                           {% if registrant.revoked %}checked{% endif %}
-                                           class="focus:ring-red-500 h-4 w-4 text-red-600 border-gray-300 rounded">
+                                            <span class="ml-3 text-sm text-gray-700">{{ part }}</span>
+                                        </label>
+                                    {% endfor %}
                                 </div>
-                                <div class="ml-3">
-                                    <label for="revoked" class="text-sm font-medium text-red-700">
-                                        Revoke Registration
-                                    </label>
-                                    <p class="text-xs text-red-600">
-                                        Check this box to revoke this registration. This will mark it as invalid.
-                                    </p>
+                            </div>
+
+                            <!-- Revoke Registration -->
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                                <div class="flex items-start">
+                                    <div class="flex items-center h-5">
+                                        <input type="checkbox" 
+                                               name="revoked" 
+                                               id="revoked"
+                                               {% if registrant.revoked %}checked{% endif %}
+                                               class="focus:ring-red-500 h-4 w-4 text-red-600 border-gray-300 rounded">
+                                    </div>
+                                    <div class="ml-3">
+                                        <label for="revoked" class="text-sm font-medium text-red-700">
+                                            Revoke Registration
+                                        </label>
+                                        <p class="text-xs text-red-600 mt-0.5">
+                                            Mark registration as invalid
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Registration Information -->
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <h3 class="text-sm font-medium text-gray-700 mb-2">Registration Information</h3>
-                            <div class="text-sm text-gray-600 space-y-1">
-                                <p><strong>Registration Date:</strong> {{ registrant.registration_date }}</p>
-                                <p><strong>Verification URL:</strong> 
-                                    <a href="{{ get_verification_url(registrant.registration_id) }}" 
-                                       target="_blank" 
-                                       rel="noopener noreferrer"
-                                       class="text-emerald-600 hover:text-emerald-700 underline">
-                                        View Page
-                                    </a>
-                                </p>
+                        <!-- Financial Section -->
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+                            <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Financial Details</h4>
+                            
+                            <!-- Revenue Clients -->
+                            <div>
+                                <label for="revenue_clients" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Revenue Client(s)
+                                </label>
+                                <input type="text" 
+                                       name="revenue_clients" 
+                                       id="revenue_clients"
+                                       value="{{ revenue_clients or '' }}"
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                       placeholder="Comma-separated names">
+                                <p class="mt-1 text-xs text-gray-500">Updates revenue entry clients. Leave as-is to keep current.</p>
                             </div>
                         </div>
                     </div>
+                </div>
                 </div>
 
                 <!-- Form Actions -->
@@ -285,10 +309,27 @@
 </div>
 
 <style>
+    /* Default state - blue for male, pink for female */
+    .tshirt-btn {
+        color: #3b82f6; /* blue for male by default */
+    }
+    
+    .tshirt-btn.female-style {
+        color: #ec4899; /* pink for female */
+    }
+    
+    /* Checked state - filled blue for male, filled pink for female */
     .tshirt-radio:checked + .tshirt-btn {
-        background-color: white;
-        border-color: #10b981;
-        color: #10b981;
+        background-color: #3b82f6; /* blue fill for male */
+        border-color: #3b82f6;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .tshirt-radio:checked + .tshirt-btn.female-style {
+        background-color: #ec4899; /* pink fill for female */
+        border-color: #ec4899;
+        color: white;
         font-weight: 600;
     }
 </style>
@@ -297,11 +338,56 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Get form elements
     const rollInput = document.getElementById('roll');
+    const rollSuffixInput = document.getElementById('roll_suffix');
+    const emailInput = document.getElementById('email');
+    const emailPrefixInput = document.getElementById('email_prefix');
     const nameInput = document.getElementById('name');
     const genderSelect = document.getElementById('gender');
     const phoneInput = document.getElementById('phone');
     const studentImage = document.getElementById('student-image');
     const studentStatus = document.getElementById('student-status');
+    
+    // Sync roll_suffix to roll hidden field
+    function updateRollField() {
+        if (rollInput && rollSuffixInput) {
+            rollInput.value = '12024250' + rollSuffixInput.value;
+        }
+    }
+    
+    // Sync email_prefix to email hidden field
+    function updateEmailField() {
+        if (emailInput && emailPrefixInput) {
+            emailInput.value = emailPrefixInput.value ? emailPrefixInput.value + '@gmail.com' : '';
+        }
+    }
+    
+    // Update T-shirt button colors based on gender
+    function updateTshirtColors() {
+        const gender = genderSelect.value;
+        const tshirtBtns = document.querySelectorAll('.tshirt-btn');
+        tshirtBtns.forEach(btn => {
+            if (gender === 'Female') {
+                btn.classList.add('female-style');
+            } else {
+                btn.classList.remove('female-style');
+            }
+        });
+    }
+    
+    if (rollSuffixInput) {
+        rollSuffixInput.addEventListener('input', updateRollField);
+        updateRollField(); // Initialize
+    }
+    
+    if (emailPrefixInput) {
+        emailPrefixInput.addEventListener('input', updateEmailField);
+        updateEmailField(); // Initialize
+    }
+    
+    if (genderSelect) {
+        genderSelect.addEventListener('change', updateTshirtColors);
+        updateTshirtColors(); // Initialize
+    }
 
     // Track which fields have been manually edited vs auto-filled
     const fieldEditState = {
@@ -419,9 +505,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Debounced version of fetchStudentData
     const debouncedFetchStudentData = debounce(fetchStudentData, 300);
 
-    // Set up roll input listener
-    if (rollInput) {
-        rollInput.addEventListener('input', function() {
+    // Set up roll suffix input listener
+    if (rollSuffixInput) {
+        rollSuffixInput.addEventListener('input', function() {
+            updateRollField();
             debouncedFetchStudentData(rollInput.value.trim());
         });
     }
