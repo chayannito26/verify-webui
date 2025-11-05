@@ -10,9 +10,29 @@
             <h1 class="text-3xl font-bold text-gray-900">Add New Registrant</h1>
         </div>
 
+        <!-- Top Action Buttons -->
+        <div class="mb-6 flex items-center justify-between">
+            <a href="{{ url_for('index') }}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Dashboard
+            </a>
+
+            <button type="submit" 
+                    form="registrant-form"
+                    class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Add Registrant
+            </button>
+        </div>
+
         <!-- Form -->
         <div class="bg-white shadow rounded-lg">
-            <form method="POST" class="px-6 py-8">
+            <form method="POST" id="registrant-form" class="px-6 py-8">
                 <div class="flex gap-6">
                 <!-- Left Column: Main Registration Form -->
                 <div class="flex-1 space-y-4">
@@ -245,24 +265,7 @@
                     </div>
                 </div>
 
-                <!-- Form Actions -->
-                <div class="mt-8 flex items-center justify-between">
-                    <a href="{{ url_for('index') }}" 
-                       class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Back to Dashboard
-                    </a>
 
-                    <button type="submit" 
-                            class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Add Registrant
-                    </button>
-                </div>
             </form>
         </div>
     </div>
