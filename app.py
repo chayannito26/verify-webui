@@ -35,6 +35,21 @@ GENDER_INFO = {
     'Female': {'short': 'G', 'color': 'pink', 'dot': '🟣'}
 }
 
+# Ticket book structures: list of (start, end) inclusive ranges per (group, gender)
+# These define logical books of registration IDs; a book is "started" once any
+# ID within its range is assigned. For each started book that still has vacancy
+# we expose the first gap (lowest unused number) within that book as a quick-select
+# option. Additionally, if no books have started yet, we expose the first gap of
+# the first book (normally its first number).
+BOOK_STRUCTURES = {
+    ('SC', 'Male'): [(1, 50), (51, 100), (101, 150)],
+    ('SC', 'Female'): [(1, 50)],
+    ('AR', 'Male'): [(1, 50), (51, 100), (101, 150)],
+    ('AR', 'Female'): [(1, 50), (51, 100)],
+    ('CO', 'Male'): [(1, 50), (51, 100), (101, 150)],
+    ('CO', 'Female'): [(1, 35), (36, 50)],
+}
+
 # T-shirt size options (keep consistent across UI)
 TSHIRT_SIZES = ['M','L','XL','XXL','3XL','4XL']
 
@@ -305,6 +320,116 @@ def get_next_registration_id(group, gender, ignore_ids=None):
 
     return f"{prefix}{next_number:04d}"
 
+def compute_vacant_registration_ids(group: str, gender: str):
+    """Compute quick-select vacant registration IDs across ticket books.
+
+    Logic:
+      - For each defined book (start-end) for (group, gender):
+          * Determine which numbers in that range are already taken.
+          * If any number in the range is taken (book started) and there is vacancy,
+            expose the first gap (lowest unused number in that range) as an option.
+      - If no book has started yet (no taken numbers across all ranges), expose the
+        first gap of the first book only (normally start number).
+      - next_id is the first option (numerically smallest) if options exist, else
+        falls back to global next gap using existing logic.
+
+    Returns dict:
+      {
+        'next_id': 'SC-B-0001',
+        'options': ['SC-B-0004','SC-B-0052'],
+        'books': [
+           {'range': [1,50], 'started': True, 'vacancy': True, 'first_gap': 4},
+           {'range': [51,100], 'started': True, 'vacancy': True, 'first_gap': 52},
+           ...
+        ]
+      }
+    """
+    if (group, gender) not in BOOK_STRUCTURES:
+        # Fallback: single option based on global next gap
+        fallback = get_next_registration_id(group, gender)
+        return {'next_id': fallback, 'options': [fallback], 'books': []}
+
+    registrants = load_registrants()
+    gender_short = GENDER_INFO[gender]['short']
+    prefix = f"{group}-{gender_short}-"
+
+    # Collect taken numeric portions for this prefix
+    taken_numbers = set()
+    for reg in registrants:
+        reg_id = reg.get('registration_id', '')
+        if reg_id.startswith(prefix):
+            try:
+                num = int(reg_id.split('-')[-1])
+                taken_numbers.add(num)
+            except Exception:
+                continue
+
+    book_defs = BOOK_STRUCTURES[(group, gender)]
+    books_meta = []
+    options = []
+    any_started = False
+
+    for (start, end) in book_defs:
+        # Numbers in this book
+        nums_in_book = {n for n in taken_numbers if start <= n <= end}
+        started = len(nums_in_book) > 0
+        first_gap = None
+        vacancy = False
+        if started:
+            any_started = True
+            # Find lowest number in range not taken
+            for candidate in range(start, end + 1):
+                if candidate not in nums_in_book:
+                    first_gap = candidate
+                    vacancy = True
+                    break
+            # If vacancy add option
+            if vacancy and first_gap is not None:
+                options.append(f"{prefix}{first_gap:04d}")
+        books_meta.append({
+            'range': [start, end],
+            'started': started,
+            'vacancy': vacancy,
+            'first_gap': first_gap
+        })
+
+    # If no books started yet, surface first gap for the first book only
+    if not any_started:
+        start, end = book_defs[0]
+        # compute first gap in first book (lowest unused number globally inside range)
+        for candidate in range(start, end + 1):
+            if candidate not in taken_numbers:
+                options = [f"{prefix}{candidate:04d}"]
+                # update meta for first book
+                if books_meta:
+                    books_meta[0]['started'] = False
+                    books_meta[0]['vacancy'] = True
+                    books_meta[0]['first_gap'] = candidate
+                break
+
+    # Determine next_id precedence
+    next_id = None
+    if options:
+        # Choose numerically smallest option
+        try:
+            next_id = min(options, key=lambda rid: int(rid.split('-')[-1]))
+        except Exception:
+            next_id = options[0]
+    else:
+        next_id = get_next_registration_id(group, gender)
+
+    # Sort options numerically for presentation consistency
+    try:
+        options.sort(key=lambda rid: int(rid.split('-')[-1]))
+    except Exception:
+        pass
+
+    return {
+        'next_id': next_id,
+        'options': options,
+        'books': books_meta
+    }
+
 def group_registrants(registrants):
     """Group registrants by group and gender."""
     grouped = {}
@@ -520,6 +645,31 @@ def api_next_registration_id():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     return jsonify({'next_id': next_id})
+
+@app.route('/api/vacant_registration_ids')
+def api_vacant_registration_ids():
+        """Return quick-select vacant registration IDs across ticket books.
+
+        Query params: group, gender
+        Response JSON:
+            {
+                "next_id": "SC-B-0004",           # preferred autofill suggestion
+                "options": ["SC-B-0004", "SC-B-0052"],  # list of selectable vacant IDs
+                "books": [
+                     {"range": [1,50], "started": true, "vacancy": true, "first_gap": 4},
+                     {"range": [51,100], "started": true, "vacancy": true, "first_gap": 52}
+                ]
+            }
+        """
+        group = request.args.get('group')
+        gender = request.args.get('gender')
+        if not group or not gender:
+                return jsonify({'error': 'missing group or gender'}), 400
+        try:
+                result = compute_vacant_registration_ids(group, gender)
+        except Exception as e:
+                return jsonify({'error': str(e)}), 400
+        return jsonify(result)
 
 @app.route('/api/referrals')
 def api_referrals():

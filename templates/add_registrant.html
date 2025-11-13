@@ -44,6 +44,13 @@
                                class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                                placeholder="AR-B-####" />
                     </div>
+                    <!-- Quick Select Vacant IDs -->
+                    <div id="vacant-id-wrapper" class="mt-2 hidden">
+                        <div class="flex items-start gap-2">
+                            <span class="text-xs font-medium text-gray-600 w-48">Quick Select:</span>
+                            <div id="vacant-id-options" class="flex flex-wrap gap-2"></div>
+                        </div>
+                    </div>
 
                     <!-- Name -->
                     <div class="flex items-center">
@@ -614,10 +621,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 // ignore network errors, leave input unchanged
                 console.warn('Could not fetch next registration id', err);
             }
+            // Also refresh quick select vacant IDs
+            loadVacantRegistrationIds();
         } else {
             if (registrationIdInput) {
                 registrationIdInput.value = '';
             }
+            hideVacantIds();
         }
     }
 
@@ -683,6 +693,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Trigger an initial update on load in case group/gender are pre-selected
     updateRegIdPreview();
     updateRevenueClientsPrefill();
+    // Load quick select on initial load as well
+    loadVacantRegistrationIds();
     
     // Load initial student data if roll is already filled
     if (rollInput && rollInput.value.trim()) {
@@ -965,6 +977,80 @@ document.addEventListener('DOMContentLoaded', function() {
         clearBtn.addEventListener('click', function() {
             importTextarea.value = '';
             importFeedback.textContent = '';
+        });
+    }
+
+    // ---- Quick Select Vacant Registration IDs ----
+    const vacantWrapper = document.getElementById('vacant-id-wrapper');
+    const vacantOptionsDiv = document.getElementById('vacant-id-options');
+
+    function hideVacantIds() {
+    if (vacantWrapper) vacantWrapper.classList.add('hidden');
+    if (vacantOptionsDiv) vacantOptionsDiv.innerHTML = '';
+    }
+
+    async function loadVacantRegistrationIds() {
+        if (!groupSelect || !genderSelect || !vacantOptionsDiv) return;
+        const group = groupSelect.value;
+        const gender = genderSelect.value;
+        if (!group || !gender) { hideVacantIds(); return; }
+        try {
+            const params = new URLSearchParams({group, gender});
+            const resp = await fetch(`/api/vacant_registration_ids?${params.toString()}`);
+            if (!resp.ok) { hideVacantIds(); return; }
+            const data = await resp.json();
+            const opts = Array.isArray(data.options) ? data.options : [];
+            if (opts.length === 0) { hideVacantIds(); return; }
+
+            // If there is exactly one available ID, autofill it (unless user manually edited)
+            if (opts.length === 1) {
+                const onlyId = opts[0];
+                // Only overwrite if user hasn't edited registration_id manually
+                if (registrationIdInput && !fieldEditState.registration_id) {
+                    registrationIdInput.value = onlyId;
+                    registrationIdInput.dataset.autofill = '1';
+                }
+                // Do not show quick-select when only one option exists
+                hideVacantIds();
+                return;
+            }
+
+            vacantOptionsDiv.innerHTML = '';
+            opts.forEach(id => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = id.split('-').slice(-1)[0]; // show only numeric part for brevity
+                btn.title = id;
+                btn.className = 'px-2 py-1 border-2 border-emerald-300 rounded-md text-xs font-semibold bg-white hover:bg-emerald-50 text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors';
+                btn.addEventListener('click', () => {
+                    if (registrationIdInput) {
+                        registrationIdInput.value = id;
+                        // treat as manual selection (prevent future auto-overwrite)
+                        fieldEditState.registration_id = true;
+                        registrationIdInput.dataset.autofill = '0';
+                    }
+                });
+                vacantOptionsDiv.appendChild(btn);
+            });
+            // Show wrapper
+            vacantWrapper.classList.remove('hidden');
+            // (no hint text displayed; only quick-select buttons)
+            // If user hasn't edited registration id yet, set it to server's next_id
+            if (registrationIdInput && !fieldEditState.registration_id && data.next_id) {
+                registrationIdInput.value = data.next_id;
+                registrationIdInput.dataset.autofill = '1';
+            }
+        } catch (e) {
+            console.warn('Failed to load vacant registration IDs', e);
+            hideVacantIds();
+        }
+    }
+
+    // Mark manual edits on registration_id
+    if (registrationIdInput) {
+        registrationIdInput.addEventListener('input', () => {
+            fieldEditState.registration_id = true;
+            registrationIdInput.dataset.autofill = '0';
         });
     }
 
