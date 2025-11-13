@@ -42,7 +42,7 @@
                         <input type="text" id="registration_id" name="registration_id"
                                value="{{ form_data.registration_id if form_data else '' }}"
                                class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                               placeholder="AR-B-####" readonly />
+                               placeholder="AR-B-####" />
                     </div>
 
                     <!-- Name -->
@@ -374,7 +374,8 @@ document.addEventListener('DOMContentLoaded', function() {
         name: false,
         gender: false,
         group: false,
-        phone: false
+        phone: false,
+        registration_id: false
     };
 
     // Track which fields were auto-filled (can be overwritten by new roll data)
@@ -415,6 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (genderSelect) trackFieldEdit('gender', genderSelect);
     if (groupSelect) trackFieldEdit('group', groupSelect);
     if (phoneInput) trackFieldEdit('phone', phoneInput);
+    if (registrationIdInput) trackFieldEdit('registration_id', registrationIdInput);
 
     // Debounce function for API calls
     function debounce(func, wait) {
@@ -600,7 +602,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (resp.ok) {
                     const data = await resp.json();
                     if (registrationIdInput) {
-                        registrationIdInput.value = data.next_id;
+                        // Only auto-fill the registration id when the user hasn't manually edited it.
+                        if (!fieldEditState.registration_id) {
+                            registrationIdInput.value = data.next_id;
+                            // mark as autofill so subsequent auto-updates can overwrite unless user edits
+                            registrationIdInput.dataset.autofill = '1';
+                        }
                     }
                 }
             } catch (err) {
