@@ -44,6 +44,12 @@
                                class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                                placeholder="AR-B-####" />
                     </div>
+                    <!-- Inline warning for duplicate registration ID -->
+                    <div id="registration-id-warning" class="mt-1 ml-48 text-sm" aria-live="polite">
+                        {% if registration_id_error %}
+                        <div class="text-red-600">{{ registration_id_error }}</div>
+                        {% endif %}
+                    </div>
                     <!-- Quick Select Vacant IDs -->
                     <div id="vacant-id-wrapper" class="mt-2 hidden">
                         <div class="flex items-start gap-2">
@@ -78,6 +84,12 @@
                                    placeholder="e.g., 10276">
                             <input type="hidden" name="roll" id="roll" value="">
                         </div>
+                    </div>
+                    <!-- Inline warning for duplicate roll -->
+                    <div id="roll-warning" class="mt-1 ml-48 text-sm" aria-live="polite">
+                        {% if roll_error %}
+                        <div class="text-red-600">{{ roll_error }}</div>
+                        {% endif %}
                     </div>
 
                     <!-- Phone -->
@@ -382,7 +394,8 @@ document.addEventListener('DOMContentLoaded', function() {
         gender: false,
         group: false,
         phone: false,
-        registration_id: false
+        registration_id: false,
+        roll: false
     };
 
     // Track which fields were auto-filled (can be overwritten by new roll data)
@@ -424,6 +437,93 @@ document.addEventListener('DOMContentLoaded', function() {
     if (groupSelect) trackFieldEdit('group', groupSelect);
     if (phoneInput) trackFieldEdit('phone', phoneInput);
     if (registrationIdInput) trackFieldEdit('registration_id', registrationIdInput);
+
+    // Inline validation UI for registration ID uniqueness
+    const registrationIdWarning = document.getElementById('registration-id-warning');
+    function showRegistrationIdWarning(msg) {
+        if (!registrationIdWarning) return;
+        registrationIdWarning.innerHTML = `<div class="text-red-600">${msg}</div>`;
+        registrationIdInput.setAttribute('aria-invalid', 'true');
+        registrationIdInput.dataset.invalid = '1';
+    }
+    function clearRegistrationIdWarning() {
+        if (!registrationIdWarning) return;
+        registrationIdWarning.innerHTML = '';
+        registrationIdInput.removeAttribute('aria-invalid');
+        registrationIdInput.dataset.invalid = '0';
+    }
+
+    // Inline validation UI for roll uniqueness
+    const rollWarning = document.getElementById('roll-warning');
+    function showRollWarning(msg) {
+        if (!rollWarning) return;
+        rollWarning.innerHTML = `<div class="text-red-600">${msg}</div>`;
+        if (rollSuffixInput) rollSuffixInput.setAttribute('aria-invalid', 'true');
+        if (rollInput) rollInput.dataset.invalid = '1';
+    }
+    function clearRollWarning() {
+        if (!rollWarning) return;
+        rollWarning.innerHTML = '';
+        if (rollSuffixInput) rollSuffixInput.removeAttribute('aria-invalid');
+        if (rollInput) rollInput.dataset.invalid = '0';
+    }
+
+    // Debounced check against server for existence
+    const debouncedCheckRegistrationId = debounce(async function() {
+        const rid = (registrationIdInput.value || '').trim();
+        if (!rid) {
+            clearRegistrationIdWarning();
+            return;
+        }
+        try {
+            const params = new URLSearchParams({ registration_id: rid });
+            const resp = await fetch(`/api/check_registration_id?${params.toString()}`);
+            if (!resp.ok) return; // ignore network errors
+            const data = await resp.json();
+            if (data && data.exists) {
+                showRegistrationIdWarning(`Registration ID ${rid} is already in use.`);
+            } else {
+                clearRegistrationIdWarning();
+            }
+        } catch (e) {
+            // ignore
+        }
+    }, 300);
+
+    // Run check when user stops typing or when field loses focus
+    if (registrationIdInput) {
+        registrationIdInput.addEventListener('input', function() {
+            // if user manually edits, consider it 'edited' and run check
+            fieldEditState.registration_id = true;
+            registrationIdInput.dataset.autofill = '0';
+            debouncedCheckRegistrationId();
+        });
+        registrationIdInput.addEventListener('blur', function() {
+            debouncedCheckRegistrationId();
+        });
+    }
+
+    // Debounced check for roll uniqueness
+    const debouncedCheckRoll = debounce(async function() {
+        const r = (rollInput && rollInput.value) ? rollInput.value.trim() : '';
+        if (!r || r.length < 8) {
+            clearRollWarning();
+            return;
+        }
+        try {
+            const params = new URLSearchParams({ roll: r });
+            const resp = await fetch(`/api/check_roll?${params.toString()}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (data && data.exists) {
+                showRollWarning(`Roll ${r} is already registered.`);
+            } else {
+                clearRollWarning();
+            }
+        } catch (e) {
+            // ignore network errors
+        }
+    }, 300);
 
     // Debounce function for API calls
     function debounce(func, wait) {
@@ -671,7 +771,13 @@ document.addEventListener('DOMContentLoaded', function() {
         rollSuffixInput.addEventListener('input', function() {
             updateRollField();
             updateGroupFromRoll();
+            // mark as manually edited and clear autofill marker
+            fieldEditState.roll = true;
+            if (rollInput) rollInput.dataset.autofill = '0';
+            // fetch student data (existing behavior)
             debouncedFetchStudentData(rollInput.value.trim());
+            // check for duplicate roll
+            debouncedCheckRoll();
         });
     }
 
@@ -699,6 +805,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load initial student data if roll is already filled
     if (rollInput && rollInput.value.trim()) {
         fetchStudentData(rollInput.value.trim());
+        // Also check roll uniqueness on initial load
+        debouncedCheckRoll();
     }
 
     // --- Import-from-text parsing logic ---

@@ -543,6 +543,18 @@ def add_registrant():
                                  TSHIRT_SIZES=TSHIRT_SIZES,
                                  form_data=request.form)
 
+        # Ensure roll number uniqueness (prevent duplicate people)
+        if roll:
+            if any(r.get('roll') == roll for r in registrants):
+                roll_error = f'Roll {roll} is already registered. Please check before adding.'
+                flash(roll_error, 'error')
+                return render_template('add_registrant.html',
+                                     GROUP_INFO=GROUP_INFO,
+                                     GENDER_INFO=GENDER_INFO,
+                                     TSHIRT_SIZES=TSHIRT_SIZES,
+                                     form_data=request.form,
+                                     roll_error=roll_error)
+
         # T-shirt size validation when applicable
         if 'T-Shirt' in parts_available:
             if not tshirt_size:
@@ -565,12 +577,15 @@ def add_registrant():
         if provided_id:
             # Check uniqueness
             if any(r.get('registration_id') == provided_id for r in registrants):
-                flash(f'Registration ID {provided_id} is already in use. Please choose a different ID.', 'error')
+                # Return the form with a field-specific error so the template can show an inline warning
+                registration_id_error = f'Registration ID {provided_id} is already in use. Please choose a different ID.'
+                flash(registration_id_error, 'error')
                 return render_template('add_registrant.html', 
                                      GROUP_INFO=GROUP_INFO, 
                                      GENDER_INFO=GENDER_INFO,
                                      TSHIRT_SIZES=TSHIRT_SIZES,
-                                     form_data=request.form)
+                                     form_data=request.form,
+                                     registration_id_error=registration_id_error)
             registration_id = provided_id
         else:
             # Generate registration ID
@@ -645,6 +660,36 @@ def api_next_registration_id():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     return jsonify({'next_id': next_id})
+
+
+@app.route('/api/check_registration_id')
+def api_check_registration_id():
+    """Check if a given registration_id already exists.
+
+    Query params: registration_id
+    Response JSON: { "exists": true|false }
+    """
+    reg_id = request.args.get('registration_id', '').strip()
+    if not reg_id:
+        return jsonify({'error': 'missing registration_id'}), 400
+    registrants = load_registrants()
+    exists = any(r.get('registration_id') == reg_id for r in registrants)
+    return jsonify({'exists': bool(exists)})
+
+
+@app.route('/api/check_roll')
+def api_check_roll():
+    """Check if a given roll is already registered.
+
+    Query params: roll
+    Response JSON: { "exists": true|false }
+    """
+    roll = request.args.get('roll', '').strip()
+    if not roll:
+        return jsonify({'error': 'missing roll'}), 400
+    registrants = load_registrants()
+    exists = any(r.get('roll') == roll for r in registrants)
+    return jsonify({'exists': bool(exists)})
 
 @app.route('/api/vacant_registration_ids')
 def api_vacant_registration_ids():
