@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics - Chayannito 26 Management{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">📊 Statistics Dashboard</h1>
+        <p class="text-gray-600">Comprehensive analysis of registration data</p>
+    </div>
+
+    <!-- Overview Statistics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden shadow-lg rounded-lg hover-scale transition-transform">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-blue-100 text-sm font-medium uppercase">Total Registrants</p>
+                        <p class="text-4xl font-bold mt-2">{{ stats.total }}</p>
+                    </div>
+                    <div class="text-blue-200">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-500 to-green-600 text-white overflow-hidden shadow-lg rounded-lg hover-scale transition-transform">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-green-100 text-sm font-medium uppercase">Active</p>
+                        <p class="text-4xl font-bold mt-2">{{ stats.active }}</p>
+                        <p class="text-green-100 text-xs mt-1">{{ "%.1f"|format((stats.active / stats.total * 100) if stats.total > 0 else 0) }}%</p>
+                    </div>
+                    <div class="text-green-200">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-red-500 to-red-600 text-white overflow-hidden shadow-lg rounded-lg hover-scale transition-transform">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-red-100 text-sm font-medium uppercase">Revoked</p>
+                        <p class="text-4xl font-bold mt-2">{{ stats.revoked }}</p>
+                        <p class="text-red-100 text-xs mt-1">{{ "%.1f"|format((stats.revoked / stats.total * 100) if stats.total > 0 else 0) }}%</p>
+                    </div>
+                    <div class="text-red-200">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white overflow-hidden shadow-lg rounded-lg hover-scale transition-transform">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-yellow-100 text-sm font-medium uppercase">Total Revenue</p>
+                        <p class="text-4xl font-bold mt-2">৳{{ "{:,}".format(stats.total_payments) }}</p>
+                        <p class="text-yellow-100 text-xs mt-1">Avg: ৳{{ "{:,.0f}".format(stats.average_payment) }}</p>
+                    </div>
+                    <div class="text-yellow-200">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group and Gender Distribution -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Group Distribution -->
+        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">Group Distribution</h2>
+            </div>
+            <div class="p-6">
+                {% for group_code, group_stats in stats.groups.items() %}
+                <div class="mb-4 last:mb-0">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium text-gray-700">
+                            {{ GROUP_INFO[group_code].emoji }} {{ GROUP_INFO[group_code].name }}
+                        </span>
+                        <span class="text-sm font-bold text-gray-900">{{ group_stats.total }} ({{ "%.1f"|format((group_stats.total / stats.total * 100) if stats.total > 0 else 0) }}%)</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div class="bg-{{ GROUP_INFO[group_code].color }}-500 h-3 rounded-full transition-all duration-500" 
+                             style="width: {{ (group_stats.total / stats.total * 100) if stats.total > 0 else 0 }}%"></div>
+                    </div>
+                    <div class="mt-2 pl-4 text-xs text-gray-600">
+                        <span class="mr-4">🔵 Male: {{ group_stats.genders.get('Male', 0) }}</span>
+                        <span>🟣 Female: {{ group_stats.genders.get('Female', 0) }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Gender Distribution -->
+        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">Gender Distribution</h2>
+            </div>
+            <div class="p-6">
+                {% for gender, count in stats.gender_distribution.items() %}
+                <div class="mb-4 last:mb-0">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium text-gray-700 flex items-center">
+                            <span class="gender-dot {% if gender == 'Male' %}male-dot{% else %}female-dot{% endif %}"></span>
+                            {{ gender }}
+                        </span>
+                        <span class="text-sm font-bold text-gray-900">{{ count }} ({{ "%.1f"|format((count / stats.total * 100) if stats.total > 0 else 0) }}%)</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div class="bg-{% if gender == 'Male' %}blue{% else %}pink{% endif %}-500 h-3 rounded-full transition-all duration-500" 
+                             style="width: {{ (count / stats.total * 100) if stats.total > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Statistics -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-900">💰 Payment Statistics</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 mb-1">Total Collected</p>
+                    <p class="text-2xl font-bold text-green-600">৳{{ "{:,}".format(stats.total_payments) }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 mb-1">Average Payment</p>
+                    <p class="text-2xl font-bold text-blue-600">৳{{ "{:,.0f}".format(stats.average_payment) }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 mb-1">Minimum Payment</p>
+                    <p class="text-2xl font-bold text-gray-600">৳{{ "{:,}".format(stats.min_payment) }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 mb-1">Maximum Payment</p>
+                    <p class="text-2xl font-bold text-purple-600">৳{{ "{:,}".format(stats.max_payment) }}</p>
+                </div>
+            </div>
+
+            <!-- Payment by Group -->
+            <div class="mt-8">
+                <h3 class="text-md font-semibold text-gray-800 mb-4">Revenue by Group</h3>
+                <div class="space-y-3">
+                    {% for group_code, amount in stats.payment_by_group.items() %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">{{ GROUP_INFO[group_code].emoji }} {{ GROUP_INFO[group_code].name }}</span>
+                        <span class="text-sm font-bold text-gray-900">৳{{ "{:,}".format(amount) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- T-Shirt Size Distribution -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">👕 T-Shirt Size Distribution</h2>
+            </div>
+            <div class="p-6">
+                {% if stats.tshirt_sizes %}
+                    {% for size, count in stats.tshirt_sizes.items() %}
+                    <div class="mb-3 last:mb-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-700">Size {{ size }}</span>
+                            <span class="text-sm font-bold text-gray-900">{{ count }} ({{ "%.1f"|format((count / stats.total_with_tshirt * 100) if stats.total_with_tshirt > 0 else 0) }}%)</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div class="bg-indigo-500 h-2 rounded-full transition-all duration-500" 
+                                 style="width: {{ (count / stats.total_with_tshirt * 100) if stats.total_with_tshirt > 0 else 0 }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <p class="text-xs text-gray-600">Total with T-Shirt: {{ stats.total_with_tshirt }} out of {{ stats.total }}</p>
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 text-center py-4">No T-shirt data available</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Parts Availability -->
+        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">🎁 Parts Availability</h2>
+            </div>
+            <div class="p-6">
+                {% for part, count in stats.parts_distribution.items() %}
+                <div class="mb-3 last:mb-0">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium text-gray-700">{{ part }}</span>
+                        <span class="text-sm font-bold text-gray-900">{{ count }} ({{ "%.1f"|format((count / stats.total * 100) if stats.total > 0 else 0) }}%)</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div class="bg-purple-500 h-2 rounded-full transition-all duration-500" 
+                             style="width: {{ (count / stats.total * 100) if stats.total > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Timeline -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-900">📅 Registration Timeline</h2>
+        </div>
+        <div class="p-6">
+            {% if stats.registration_timeline %}
+                <div class="space-y-2">
+                    {% for date, count in stats.registration_timeline.items() %}
+                    <div class="flex items-center">
+                        <span class="text-sm text-gray-700 w-40">{{ date }}</span>
+                        <div class="flex-1 ml-4">
+                            <div class="w-full bg-gray-200 rounded-full h-6 overflow-hidden flex items-center">
+                                <div class="bg-teal-500 h-6 rounded-full transition-all duration-500 flex items-center justify-end pr-2" 
+                                     style="width: {{ (count / stats.max_registrations_per_day * 100) if stats.max_registrations_per_day > 0 else 0 }}%; min-width: 30px;">
+                                    <span class="text-xs font-medium text-white">{{ count }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-500 text-center py-4">No registration data available</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Referral Statistics -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-900">🔗 Referral Statistics</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <p class="text-sm text-gray-600 mb-1">Total Referred</p>
+                    <p class="text-3xl font-bold text-blue-600">{{ stats.total_referred }}</p>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg">
+                    <p class="text-sm text-gray-600 mb-1">Self Registrations</p>
+                    <p class="text-3xl font-bold text-green-600">{{ stats.self_registrations }}</p>
+                </div>
+                <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <p class="text-sm text-gray-600 mb-1">Referral Rate</p>
+                    <p class="text-3xl font-bold text-purple-600">{{ "%.1f"|format((stats.total_referred / stats.total * 100) if stats.total > 0 else 0) }}%</p>
+                </div>
+            </div>
+
+            {% if stats.top_referrers %}
+                <div class="mt-6">
+                    <h3 class="text-md font-semibold text-gray-800 mb-4">🏆 Top Referrers</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registration ID</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referrals</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for referrer in stats.top_referrers %}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {% if loop.index == 1 %}🥇
+                                        {% elif loop.index == 2 %}🥈
+                                        {% elif loop.index == 3 %}🥉
+                                        {% else %}{{ loop.index }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ referrer.name }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">{{ referrer.registration_id }}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {{ referrer.count }} referrals
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Additional Insights -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-900">💡 Key Insights</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                    <p class="text-sm font-medium text-blue-800">Most Popular Group</p>
+                    <p class="text-lg font-bold text-blue-900 mt-1">{{ stats.most_popular_group }}</p>
+                </div>
+                <div class="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                    <p class="text-sm font-medium text-green-800">Most Popular T-Shirt Size</p>
+                    <p class="text-lg font-bold text-green-900 mt-1">{{ stats.most_popular_tshirt_size if stats.most_popular_tshirt_size else 'N/A' }}</p>
+                </div>
+                <div class="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+                    <p class="text-sm font-medium text-purple-800">Highest Single Payment</p>
+                    <p class="text-lg font-bold text-purple-900 mt-1">৳{{ "{:,}".format(stats.max_payment) }}</p>
+                </div>
+                <div class="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                    <p class="text-sm font-medium text-yellow-800">Peak Registration Day</p>
+                    <p class="text-lg font-bold text-yellow-900 mt-1">{{ stats.peak_registration_day if stats.peak_registration_day else 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
