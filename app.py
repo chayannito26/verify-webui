@@ -1034,6 +1034,248 @@ def api_stats():
     return jsonify(stats)
 
 
+@app.route('/statistics')
+def statistics():
+    """Display comprehensive statistics page."""
+    from collections import Counter
+    
+    registrants = load_registrants()
+    grouped = group_registrants(registrants)
+    
+    # Basic statistics
+    total = len(registrants)
+    active = len([r for r in registrants if not r.get('revoked', False)])
+    revoked = len([r for r in registrants if r.get('revoked', False)])
+    
+    # Payment statistics
+    payments = [r.get('paid', 0) for r in registrants if not r.get('revoked', False)]
+    total_payments = sum(payments)
+    average_payment = total_payments / active if active > 0 else 0
+    min_payment = min(payments) if payments else 0
+    max_payment = max(payments) if payments else 0
+    
+    # Payment by group
+    payment_by_group = {}
+    for group in GROUP_INFO.keys():
+        group_payments = sum(r.get('paid', 0) for r in registrants 
+                            if r.get('group') == group and not r.get('revoked', False))
+        payment_by_group[group] = group_payments
+    
+    # Payment distribution (how many people paid each amount)
+    payment_distribution = Counter()
+    for r in registrants:
+        if not r.get('revoked', False):
+            amount = r.get('paid', 0)
+            if amount > 0:
+                payment_distribution[amount] += 1
+    
+    # Sort payment distribution by amount
+    payment_distribution = dict(sorted(payment_distribution.items()))
+    
+    # Group statistics
+    groups_stats = {}
+    for group, genders in grouped.items():
+        groups_stats[group] = {
+            'total': sum(len(regs) for regs in genders.values()),
+            'genders': {gender: len(regs) for gender, regs in genders.items()}
+        }
+    
+    # Gender distribution
+    gender_distribution = Counter(r.get('gender') for r in registrants)
+    
+    # T-shirt size distribution
+    tshirt_sizes = Counter()
+    total_with_tshirt = 0
+    for r in registrants:
+        if 'T-Shirt' in r.get('parts_available', []) and r.get('tshirt_size'):
+            tshirt_sizes[r['tshirt_size']] += 1
+            total_with_tshirt += 1
+    
+    # Sort t-shirt sizes in standard order
+    size_order = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL']
+    tshirt_sizes_ordered = {size: tshirt_sizes[size] for size in size_order if size in tshirt_sizes}
+    
+    # Parts availability distribution
+    parts_distribution = Counter()
+    for r in registrants:
+        for part in r.get('parts_available', []):
+            parts_distribution[part] += 1
+    
+    # Registration timeline
+    from datetime import datetime
+    registration_timeline = Counter()
+    date_objects = {}  # Map date string to datetime object for sorting
+    
+    for r in registrants:
+        date_str = r.get('registration_date', 'Unknown')
+        registration_timeline[date_str] += 1
+        
+        # Try to parse the date for proper sorting
+        if date_str != 'Unknown':
+            try:
+                # Parse dates like "17 August 2025"
+                date_obj = datetime.strptime(date_str, '%d %B %Y')
+                date_objects[date_str] = date_obj
+            except ValueError:
+                try:
+                    # Try alternative formats
+                    date_obj = datetime.strptime(date_str, '%d %b %Y')
+                    date_objects[date_str] = date_obj
+                except ValueError:
+                    # If parsing fails, use a default old date
+                    date_objects[date_str] = datetime(1900, 1, 1)
+    
+    # Sort timeline by actual date objects (chronologically)
+    registration_timeline = dict(sorted(
+        registration_timeline.items(),
+        key=lambda x: date_objects.get(x[0], datetime(1900, 1, 1))
+    ))
+    max_registrations_per_day = max(registration_timeline.values()) if registration_timeline else 1
+    
+    # Group timeline by month for better visualization
+    monthly_timeline = Counter()
+    for date_str, count in registration_timeline.items():
+        if date_str in date_objects:
+            month_year = date_objects[date_str].strftime('%B %Y')
+            monthly_timeline[month_year] += count
+    
+    # Sort monthly timeline chronologically
+    monthly_timeline = dict(sorted(
+        monthly_timeline.items(),
+        key=lambda x: datetime.strptime(x[0], '%B %Y')
+    ))
+    
+    # Generate calendar data for calendar view
+    import calendar
+    calendar_data = []
+    
+    # Set first day of week to Sunday (6 = Sunday in Python's calendar module)
+    calendar.setfirstweekday(calendar.SUNDAY)
+    
+    if date_objects:
+        # Get the range of dates
+        all_dates = [d for d in date_objects.values() if d.year > 1900]
+        if all_dates:
+            min_date = min(all_dates)
+            max_date = max(all_dates)
+            
+            # Generate calendar for each month in the range
+            current_date = datetime(min_date.year, min_date.month, 1)
+            end_date = datetime(max_date.year, max_date.month, 1)
+            
+            while current_date <= end_date:
+                month_name = current_date.strftime('%B %Y')
+                year = current_date.year
+                month = current_date.month
+                
+                # Get calendar matrix for the month (weeks x days)
+                cal = calendar.monthcalendar(year, month)
+                
+                # Build the calendar data with registration counts
+                month_calendar = {
+                    'month_year': month_name,
+                    'year': year,
+                    'month': month,
+                    'weeks': []
+                }
+                
+                for week in cal:
+                    week_data = []
+                    for day in week:
+                        if day == 0:
+                            week_data.append({'day': 0, 'count': 0})
+                        else:
+                            # Check if there are registrations on this day
+                            # Try both with and without leading zero for single-digit days
+                            day_date = datetime(year, month, day)
+                            
+                            # Format without leading zero (portable way)
+                            day_str_no_zero = f"{day} {day_date.strftime('%B %Y')}"
+                            # Format with leading zero
+                            day_str_with_zero = day_date.strftime('%d %B %Y')
+                            
+                            # Try to find count with either format
+                            count = registration_timeline.get(day_str_no_zero, 0)
+                            if count == 0 and day_str_with_zero != day_str_no_zero:
+                                count = registration_timeline.get(day_str_with_zero, 0)
+                            
+                            week_data.append({'day': day, 'count': count})
+                    month_calendar['weeks'].append(week_data)
+                
+                calendar_data.append(month_calendar)
+                
+                # Move to next month
+                if month == 12:
+                    current_date = datetime(year + 1, 1, 1)
+                else:
+                    current_date = datetime(year, month + 1, 1)
+    
+    # Referral statistics
+    total_referred = sum(1 for r in registrants if r.get('referred_by'))
+    self_registrations = total - total_referred
+    
+    # Top referrers
+    referral_counts = Counter()
+    referrer_map = {r.get('registration_id'): r for r in registrants}
+    
+    for r in registrants:
+        referred_by = r.get('referred_by', '').strip()
+        if referred_by:
+            referral_counts[referred_by] += 1
+    
+    top_referrers = []
+    for ref_id, count in referral_counts.most_common(10):
+        referrer = referrer_map.get(ref_id)
+        if referrer:
+            top_referrers.append({
+                'registration_id': ref_id,
+                'name': referrer.get('name', 'Unknown'),
+                'count': count
+            })
+    
+    # Key insights
+    most_popular_group = max(groups_stats.items(), key=lambda x: x[1]['total'])[0] if groups_stats else 'N/A'
+    most_popular_group_name = GROUP_INFO[most_popular_group]['name'] if most_popular_group in GROUP_INFO else 'N/A'
+    
+    most_popular_tshirt_size = tshirt_sizes.most_common(1)[0][0] if tshirt_sizes else None
+    
+    peak_registration_day = max(registration_timeline.items(), key=lambda x: x[1])[0] if registration_timeline else None
+    
+    stats = {
+        'total': total,
+        'active': active,
+        'revoked': revoked,
+        'total_payments': total_payments,
+        'average_payment': average_payment,
+        'min_payment': min_payment,
+        'max_payment': max_payment,
+        'payment_by_group': payment_by_group,
+        'payment_distribution': payment_distribution,
+        'groups': groups_stats,
+        'gender_distribution': dict(gender_distribution),
+        'tshirt_sizes': tshirt_sizes_ordered,
+        'total_with_tshirt': total_with_tshirt,
+        'parts_distribution': dict(parts_distribution),
+        'registration_timeline': registration_timeline,
+        'monthly_timeline': monthly_timeline,
+        'calendar_data': calendar_data,
+        'max_registrations_per_day': max_registrations_per_day,
+        'total_referred': total_referred,
+        'self_registrations': self_registrations,
+        'top_referrers': top_referrers,
+        'most_popular_group': most_popular_group_name,
+        'most_popular_tshirt_size': most_popular_tshirt_size,
+        'peak_registration_day': peak_registration_day
+    }
+    
+    return render_template(
+        'statistics.html',
+        stats=stats,
+        GROUP_INFO=GROUP_INFO,
+        GENDER_INFO=GENDER_INFO
+    )
+
+
 @app.route('/api/student/<roll>')
 def api_get_student(roll):
     """API endpoint to fetch student data by roll number.
