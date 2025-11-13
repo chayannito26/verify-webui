@@ -171,6 +171,39 @@
                     {% endfor %}
                 </div>
             </div>
+
+            <!-- Payment Amount Distribution -->
+            {% if stats.payment_distribution %}
+            <div class="mt-8">
+                <h3 class="text-md font-semibold text-gray-800 mb-4">Payment Amount Distribution</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Paid</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number of People</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visual</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for amount, count in stats.payment_distribution.items() %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">৳{{ "{:,}".format(amount) }}</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ count }} people</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ "%.1f"|format((count / stats.active * 100) if stats.active > 0 else 0) }}%</td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="w-full bg-gray-200 rounded-full h-2 max-w-xs">
+                                        <div class="bg-green-500 h-2 rounded-full" style="width: {{ (count / stats.active * 100) if stats.active > 0 else 0 }}%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -228,30 +261,86 @@
     <!-- Registration Timeline -->
     <div class="bg-white shadow-lg rounded-lg overflow-hidden mb-8">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h2 class="text-lg font-semibold text-gray-900">📅 Registration Timeline</h2>
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">📅 Registration Timeline</h2>
+                <div class="flex items-center space-x-2">
+                    <button onclick="toggleTimelineView('monthly')" id="btn-monthly" class="px-3 py-1 text-xs font-medium rounded bg-teal-600 text-white">Monthly</button>
+                    <button onclick="toggleTimelineView('daily')" id="btn-daily" class="px-3 py-1 text-xs font-medium rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Daily</button>
+                </div>
+            </div>
         </div>
         <div class="p-6">
             {% if stats.registration_timeline %}
-                <div class="space-y-2">
-                    {% for date, count in stats.registration_timeline.items() %}
+                <!-- Monthly View (default) -->
+                <div id="monthly-timeline" class="space-y-3">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Registrations by Month</h3>
+                    {% for month, count in stats.monthly_timeline.items() %}
                     <div class="flex items-center">
-                        <span class="text-sm text-gray-700 w-40">{{ date }}</span>
+                        <span class="text-sm font-medium text-gray-700 w-32">{{ month }}</span>
                         <div class="flex-1 ml-4">
-                            <div class="w-full bg-gray-200 rounded-full h-6 overflow-hidden flex items-center">
-                                <div class="bg-teal-500 h-6 rounded-full transition-all duration-500 flex items-center justify-end pr-2" 
-                                     style="width: {{ (count / stats.max_registrations_per_day * 100) if stats.max_registrations_per_day > 0 else 0 }}%; min-width: 30px;">
-                                    <span class="text-xs font-medium text-white">{{ count }}</span>
+                            <div class="w-full bg-gray-200 rounded-full h-8 overflow-hidden flex items-center">
+                                <div class="bg-teal-600 h-8 rounded-full transition-all duration-500 flex items-center justify-end pr-3" 
+                                     style="width: {{ (count / stats.total * 100) if stats.total > 0 else 0 }}%; min-width: 40px;">
+                                    <span class="text-sm font-bold text-white">{{ count }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
+
+                <!-- Daily View (collapsible) -->
+                <div id="daily-timeline" class="hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-gray-700">Registrations by Day</h3>
+                        <span class="text-xs text-gray-500">Total: {{ stats.registration_timeline.values()|sum }} registrations</span>
+                    </div>
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        {% for date, count in stats.registration_timeline.items() %}
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-700 w-40">{{ date }}</span>
+                            <div class="flex-1 ml-4">
+                                <div class="w-full bg-gray-200 rounded-full h-6 overflow-hidden flex items-center">
+                                    <div class="bg-teal-500 h-6 rounded-full transition-all duration-500 flex items-center justify-end pr-2" 
+                                         style="width: {{ (count / stats.max_registrations_per_day * 100) if stats.max_registrations_per_day > 0 else 0 }}%; min-width: 30px;">
+                                        <span class="text-xs font-medium text-white">{{ count }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             {% else %}
                 <p class="text-gray-500 text-center py-4">No registration data available</p>
             {% endif %}
         </div>
     </div>
+
+    <script>
+        function toggleTimelineView(view) {
+            const monthlyView = document.getElementById('monthly-timeline');
+            const dailyView = document.getElementById('daily-timeline');
+            const btnMonthly = document.getElementById('btn-monthly');
+            const btnDaily = document.getElementById('btn-daily');
+            
+            if (view === 'monthly') {
+                monthlyView.classList.remove('hidden');
+                dailyView.classList.add('hidden');
+                btnMonthly.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                btnMonthly.classList.add('bg-teal-600', 'text-white');
+                btnDaily.classList.remove('bg-teal-600', 'text-white');
+                btnDaily.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            } else {
+                monthlyView.classList.add('hidden');
+                dailyView.classList.remove('hidden');
+                btnDaily.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                btnDaily.classList.add('bg-teal-600', 'text-white');
+                btnMonthly.classList.remove('bg-teal-600', 'text-white');
+                btnMonthly.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            }
+        }
+    </script>
 
     <!-- Referral Statistics -->
     <div class="bg-white shadow-lg rounded-lg overflow-hidden mb-8">

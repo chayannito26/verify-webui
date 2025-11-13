@@ -1061,6 +1061,17 @@ def statistics():
                             if r.get('group') == group and not r.get('revoked', False))
         payment_by_group[group] = group_payments
     
+    # Payment distribution (how many people paid each amount)
+    payment_distribution = Counter()
+    for r in registrants:
+        if not r.get('revoked', False):
+            amount = r.get('paid', 0)
+            if amount > 0:
+                payment_distribution[amount] += 1
+    
+    # Sort payment distribution by amount
+    payment_distribution = dict(sorted(payment_distribution.items()))
+    
     # Group statistics
     groups_stats = {}
     for group, genders in grouped.items():
@@ -1091,14 +1102,48 @@ def statistics():
             parts_distribution[part] += 1
     
     # Registration timeline
+    from datetime import datetime
     registration_timeline = Counter()
-    for r in registrants:
-        date = r.get('registration_date', 'Unknown')
-        registration_timeline[date] += 1
+    date_objects = {}  # Map date string to datetime object for sorting
     
-    # Sort timeline by date (chronologically)
-    registration_timeline = dict(sorted(registration_timeline.items()))
+    for r in registrants:
+        date_str = r.get('registration_date', 'Unknown')
+        registration_timeline[date_str] += 1
+        
+        # Try to parse the date for proper sorting
+        if date_str != 'Unknown':
+            try:
+                # Parse dates like "17 August 2025"
+                date_obj = datetime.strptime(date_str, '%d %B %Y')
+                date_objects[date_str] = date_obj
+            except ValueError:
+                try:
+                    # Try alternative formats
+                    date_obj = datetime.strptime(date_str, '%d %b %Y')
+                    date_objects[date_str] = date_obj
+                except ValueError:
+                    # If parsing fails, use a default old date
+                    date_objects[date_str] = datetime(1900, 1, 1)
+    
+    # Sort timeline by actual date objects (chronologically)
+    registration_timeline = dict(sorted(
+        registration_timeline.items(),
+        key=lambda x: date_objects.get(x[0], datetime(1900, 1, 1))
+    ))
     max_registrations_per_day = max(registration_timeline.values()) if registration_timeline else 1
+    
+    # Group timeline by month for better visualization
+    monthly_timeline = Counter()
+    for date_str, count in registration_timeline.items():
+        if date_str in date_objects:
+            month_year = date_objects[date_str].strftime('%B %Y')
+            monthly_timeline[month_year] += count
+    
+    # Sort monthly timeline chronologically
+    monthly_timeline = dict(sorted(
+        monthly_timeline.items(),
+        key=lambda x: datetime.strptime(x[0], '%B %Y')
+    ))
     
     # Referral statistics
     total_referred = sum(1 for r in registrants if r.get('referred_by'))
@@ -1140,12 +1185,14 @@ def statistics():
         'min_payment': min_payment,
         'max_payment': max_payment,
         'payment_by_group': payment_by_group,
+        'payment_distribution': payment_distribution,
         'groups': groups_stats,
         'gender_distribution': dict(gender_distribution),
         'tshirt_sizes': tshirt_sizes_ordered,
         'total_with_tshirt': total_with_tshirt,
         'parts_distribution': dict(parts_distribution),
         'registration_timeline': registration_timeline,
+        'monthly_timeline': monthly_timeline,
         'max_registrations_per_day': max_registrations_per_day,
         'total_referred': total_referred,
         'self_registrations': self_registrations,
