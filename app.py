@@ -1149,6 +1149,9 @@ def statistics():
     import calendar
     calendar_data = []
     
+    # Set first day of week to Sunday (6 = Sunday in Python's calendar module)
+    calendar.setfirstweekday(calendar.SUNDAY)
+    
     if date_objects:
         # Get the range of dates
         all_dates = [d for d in date_objects.values() if d.year > 1900]

@@ -338,48 +338,60 @@
                         </div>
                     </div>
                     
-                    <div class="space-y-8 max-h-[600px] overflow-y-auto">
+                    <div class="space-y-6 max-h-[600px] overflow-y-auto">
                         {% for month_cal in stats.calendar_data %}
-                        <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                            <h4 class="text-base font-bold text-gray-800 mb-3 text-center">{{ month_cal.month_year }}</h4>
+                        <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                            <h4 class="text-sm font-bold text-gray-800 mb-2 text-center">{{ month_cal.month_year }}</h4>
                             
                             <!-- Calendar Grid -->
-                            <div class="bg-white rounded-lg p-3 shadow-sm">
+                            <div class="bg-white rounded-lg p-2 shadow-sm">
                                 <!-- Day headers -->
-                                <div class="grid grid-cols-7 gap-1 mb-2">
-                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Sun</div>
-                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Mon</div>
-                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Tue</div>
-                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Wed</div>
-                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Thu</div>
-                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Fri</div>
-                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Sat</div>
+                                <div class="grid grid-cols-7 gap-0.5 mb-1">
+                                    <div class="text-center text-[10px] font-semibold text-gray-600 py-0.5">Sun</div>
+                                    <div class="text-center text-[10px] font-semibold text-gray-600 py-0.5">Mon</div>
+                                    <div class="text-center text-[10px] font-semibold text-gray-600 py-0.5">Tue</div>
+                                    <div class="text-center text-[10px] font-semibold text-gray-600 py-0.5">Wed</div>
+                                    <div class="text-center text-[10px] font-semibold text-gray-600 py-0.5">Thu</div>
+                                    <div class="text-center text-[10px] font-semibold text-gray-600 py-0.5">Fri</div>
+                                    <div class="text-center text-[10px] font-semibold text-gray-600 py-0.5">Sat</div>
                                 </div>
                                 
                                 <!-- Calendar dates -->
                                 {% for week in month_cal.weeks %}
-                                <div class="grid grid-cols-7 gap-1 mb-1">
+                                <div class="grid grid-cols-7 gap-0.5 mb-0.5">
                                     {% for day_data in week %}
                                     {% if day_data.day == 0 %}
-                                        <div class="aspect-square"></div>
+                                        <div class="w-full" style="padding-bottom: 100%;"></div>
                                     {% else %}
                                         {% set intensity_class = '' %}
+                                        {% set text_class = '' %}
+                                        {% set count_class = '' %}
                                         {% if day_data.count == 0 %}
-                                            {% set intensity_class = 'bg-gray-100 border-gray-300 text-gray-400' %}
+                                            {% set intensity_class = 'bg-gray-100 border-gray-300' %}
+                                            {% set text_class = 'text-gray-500' %}
                                         {% elif day_data.count <= 2 %}
-                                            {% set intensity_class = 'bg-teal-200 border-teal-300 text-teal-900' %}
+                                            {% set intensity_class = 'bg-teal-200 border-teal-300' %}
+                                            {% set text_class = 'text-teal-900' %}
+                                            {% set count_class = 'bg-teal-900 text-white' %}
                                         {% elif day_data.count <= 4 %}
-                                            {% set intensity_class = 'bg-teal-400 border-teal-500 text-white' %}
+                                            {% set intensity_class = 'bg-teal-400 border-teal-500' %}
+                                            {% set text_class = 'text-teal-900' %}
+                                            {% set count_class = 'bg-teal-900 text-white' %}
                                         {% else %}
-                                            {% set intensity_class = 'bg-teal-600 border-teal-700 text-white' %}
+                                            {% set intensity_class = 'bg-teal-600 border-teal-700' %}
+                                            {% set text_class = 'text-white' %}
+                                            {% set count_class = 'bg-white text-teal-900' %}
                                         {% endif %}
                                         
-                                        <div class="aspect-square border-2 rounded-lg flex flex-col items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-md cursor-pointer {{ intensity_class }}" 
+                                        <div class="relative w-full border rounded {{ intensity_class }} transition-all duration-200 hover:scale-105 hover:shadow-md cursor-pointer" 
+                                             style="padding-bottom: 100%;"
                                              title="{{ day_data.day }} {{ month_cal.month_year }}: {{ day_data.count }} registration(s)">
-                                            <div class="text-sm font-bold">{{ day_data.day }}</div>
-                                            {% if day_data.count > 0 %}
-                                            <div class="text-[10px] font-semibold px-1 py-0.5 bg-white bg-opacity-90 rounded mt-0.5">{{ day_data.count }}</div>
-                                            {% endif %}
+                                            <div class="absolute inset-0 flex flex-col items-center justify-center p-0.5">
+                                                <div class="text-[11px] font-bold {{ text_class }}">{{ day_data.day }}</div>
+                                                {% if day_data.count > 0 %}
+                                                <div class="text-[9px] font-bold px-1 rounded mt-0.5 {{ count_class }}">{{ day_data.count }}</div>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     {% endif %}
                                     {% endfor %}
