@@ -266,6 +266,7 @@
                 <div class="flex items-center space-x-2">
                     <button onclick="toggleTimelineView('monthly')" id="btn-monthly" class="px-3 py-1 text-xs font-medium rounded bg-teal-600 text-white">Monthly</button>
                     <button onclick="toggleTimelineView('daily')" id="btn-daily" class="px-3 py-1 text-xs font-medium rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Daily</button>
+                    <button onclick="toggleTimelineView('calendar')" id="btn-calendar" class="px-3 py-1 text-xs font-medium rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Calendar</button>
                 </div>
             </div>
         </div>
@@ -311,6 +312,84 @@
                         {% endfor %}
                     </div>
                 </div>
+
+                <!-- Calendar View (heatmap) -->
+                <div id="calendar-timeline" class="hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-semibold text-gray-700">Registration Calendar Heatmap</h3>
+                        <div class="flex items-center space-x-2 text-xs">
+                            <span class="text-gray-600">Legend:</span>
+                            <div class="flex items-center space-x-1">
+                                <div class="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                                <span class="text-gray-600">0</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <div class="w-4 h-4 bg-teal-200 border border-teal-300 rounded"></div>
+                                <span class="text-gray-600">1-2</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <div class="w-4 h-4 bg-teal-400 border border-teal-500 rounded"></div>
+                                <span class="text-gray-600">3-4</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <div class="w-4 h-4 bg-teal-600 border border-teal-700 rounded"></div>
+                                <span class="text-gray-600">5+</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-8 max-h-[600px] overflow-y-auto">
+                        {% for month_cal in stats.calendar_data %}
+                        <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <h4 class="text-base font-bold text-gray-800 mb-3 text-center">{{ month_cal.month_year }}</h4>
+                            
+                            <!-- Calendar Grid -->
+                            <div class="bg-white rounded-lg p-3 shadow-sm">
+                                <!-- Day headers -->
+                                <div class="grid grid-cols-7 gap-1 mb-2">
+                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Sun</div>
+                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Mon</div>
+                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Tue</div>
+                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Wed</div>
+                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Thu</div>
+                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Fri</div>
+                                    <div class="text-center text-xs font-semibold text-gray-600 py-1">Sat</div>
+                                </div>
+                                
+                                <!-- Calendar dates -->
+                                {% for week in month_cal.weeks %}
+                                <div class="grid grid-cols-7 gap-1 mb-1">
+                                    {% for day_data in week %}
+                                    {% if day_data.day == 0 %}
+                                        <div class="aspect-square"></div>
+                                    {% else %}
+                                        {% set intensity_class = '' %}
+                                        {% if day_data.count == 0 %}
+                                            {% set intensity_class = 'bg-gray-100 border-gray-300 text-gray-400' %}
+                                        {% elif day_data.count <= 2 %}
+                                            {% set intensity_class = 'bg-teal-200 border-teal-300 text-teal-900' %}
+                                        {% elif day_data.count <= 4 %}
+                                            {% set intensity_class = 'bg-teal-400 border-teal-500 text-white' %}
+                                        {% else %}
+                                            {% set intensity_class = 'bg-teal-600 border-teal-700 text-white' %}
+                                        {% endif %}
+                                        
+                                        <div class="aspect-square border-2 rounded-lg flex flex-col items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-md cursor-pointer {{ intensity_class }}" 
+                                             title="{{ day_data.day }} {{ month_cal.month_year }}: {{ day_data.count }} registration(s)">
+                                            <div class="text-sm font-bold">{{ day_data.day }}</div>
+                                            {% if day_data.count > 0 %}
+                                            <div class="text-[10px] font-semibold px-1 py-0.5 bg-white bg-opacity-90 rounded mt-0.5">{{ day_data.count }}</div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             {% else %}
                 <p class="text-gray-500 text-center py-4">No registration data available</p>
             {% endif %}
@@ -321,23 +400,35 @@
         function toggleTimelineView(view) {
             const monthlyView = document.getElementById('monthly-timeline');
             const dailyView = document.getElementById('daily-timeline');
+            const calendarView = document.getElementById('calendar-timeline');
             const btnMonthly = document.getElementById('btn-monthly');
             const btnDaily = document.getElementById('btn-daily');
+            const btnCalendar = document.getElementById('btn-calendar');
             
+            // Hide all views
+            monthlyView.classList.add('hidden');
+            dailyView.classList.add('hidden');
+            calendarView.classList.add('hidden');
+            
+            // Reset all buttons
+            [btnMonthly, btnDaily, btnCalendar].forEach(btn => {
+                btn.classList.remove('bg-teal-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            });
+            
+            // Show selected view and highlight button
             if (view === 'monthly') {
                 monthlyView.classList.remove('hidden');
-                dailyView.classList.add('hidden');
                 btnMonthly.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
                 btnMonthly.classList.add('bg-teal-600', 'text-white');
-                btnDaily.classList.remove('bg-teal-600', 'text-white');
-                btnDaily.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-            } else {
-                monthlyView.classList.add('hidden');
+            } else if (view === 'daily') {
                 dailyView.classList.remove('hidden');
                 btnDaily.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
                 btnDaily.classList.add('bg-teal-600', 'text-white');
-                btnMonthly.classList.remove('bg-teal-600', 'text-white');
-                btnMonthly.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            } else if (view === 'calendar') {
+                calendarView.classList.remove('hidden');
+                btnCalendar.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                btnCalendar.classList.add('bg-teal-600', 'text-white');
             }
         }
     </script>

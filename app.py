@@ -1145,6 +1145,68 @@ def statistics():
         key=lambda x: datetime.strptime(x[0], '%B %Y')
     ))
     
+    # Generate calendar data for calendar view
+    import calendar
+    calendar_data = []
+    
+    if date_objects:
+        # Get the range of dates
+        all_dates = [d for d in date_objects.values() if d.year > 1900]
+        if all_dates:
+            min_date = min(all_dates)
+            max_date = max(all_dates)
+            
+            # Generate calendar for each month in the range
+            current_date = datetime(min_date.year, min_date.month, 1)
+            end_date = datetime(max_date.year, max_date.month, 1)
+            
+            while current_date <= end_date:
+                month_name = current_date.strftime('%B %Y')
+                year = current_date.year
+                month = current_date.month
+                
+                # Get calendar matrix for the month (weeks x days)
+                cal = calendar.monthcalendar(year, month)
+                
+                # Build the calendar data with registration counts
+                month_calendar = {
+                    'month_year': month_name,
+                    'year': year,
+                    'month': month,
+                    'weeks': []
+                }
+                
+                for week in cal:
+                    week_data = []
+                    for day in week:
+                        if day == 0:
+                            week_data.append({'day': 0, 'count': 0})
+                        else:
+                            # Check if there are registrations on this day
+                            # Try both with and without leading zero for single-digit days
+                            day_date = datetime(year, month, day)
+                            
+                            # Format without leading zero (portable way)
+                            day_str_no_zero = f"{day} {day_date.strftime('%B %Y')}"
+                            # Format with leading zero
+                            day_str_with_zero = day_date.strftime('%d %B %Y')
+                            
+                            # Try to find count with either format
+                            count = registration_timeline.get(day_str_no_zero, 0)
+                            if count == 0 and day_str_with_zero != day_str_no_zero:
+                                count = registration_timeline.get(day_str_with_zero, 0)
+                            
+                            week_data.append({'day': day, 'count': count})
+                    month_calendar['weeks'].append(week_data)
+                
+                calendar_data.append(month_calendar)
+                
+                # Move to next month
+                if month == 12:
+                    current_date = datetime(year + 1, 1, 1)
+                else:
+                    current_date = datetime(year, month + 1, 1)
+    
     # Referral statistics
     total_referred = sum(1 for r in registrants if r.get('referred_by'))
     self_registrations = total - total_referred
@@ -1193,6 +1255,7 @@ def statistics():
         'parts_distribution': dict(parts_distribution),
         'registration_timeline': registration_timeline,
         'monthly_timeline': monthly_timeline,
+        'calendar_data': calendar_data,
         'max_registrations_per_day': max_registrations_per_day,
         'total_referred': total_referred,
         'self_registrations': self_registrations,
