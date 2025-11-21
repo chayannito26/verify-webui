@@ -50,6 +50,13 @@ BOOK_STRUCTURES = {
     ('CO', 'Female'): [(1, 35), (36, 50)],
 }
 
+# IDs that should be treated as unavailable/missing and therefore skipped
+# when suggesting the next registration id. Use uppercase values for
+# case-insensitive matching.
+MISSING_COUPONS = {
+    'SC-B-0051'
+}
+
 # T-shirt size options (keep consistent across UI)
 TSHIRT_SIZES = ['M','L','XL','XXL','3XL','4XL']
 
@@ -306,12 +313,33 @@ def get_next_registration_id(group, gender, ignore_ids=None):
         for iid in ignore_ids:
             if not isinstance(iid, str):
                 continue
-            if iid.startswith(prefix):
+            try:
+                iid_up = iid.upper()
+                pref_up = prefix.upper()
+                if iid_up.startswith(pref_up):
+                    n = int(iid_up.split('-')[-1])
+                    taken.add(n)
+            except Exception:
+                continue
+
+    # Also treat any globally configured missing coupons as taken so they
+    # are not suggested as next IDs. This allows skipping IDs like SC-B-0051
+    # which correspond to missing/non-existent coupons.
+    try:
+        for missing in MISSING_COUPONS:
+            if not isinstance(missing, str):
+                continue
+            m_up = missing.upper()
+            pref_up = prefix.upper()
+            if m_up.startswith(pref_up):
                 try:
-                    n = int(iid.split('-')[-1])
+                    n = int(m_up.split('-')[-1])
                     taken.add(n)
                 except Exception:
                     continue
+    except Exception:
+        # Defensive: if MISSING_COUPONS is malformed, ignore and proceed
+        pass
 
     # Find the smallest positive integer not in taken (first gap)
     next_number = 1
@@ -363,6 +391,23 @@ def compute_vacant_registration_ids(group: str, gender: str):
                 taken_numbers.add(num)
             except Exception:
                 continue
+
+    # Treat globally missing coupons as taken for this prefix as well
+    try:
+        for missing in MISSING_COUPONS:
+            if not isinstance(missing, str):
+                continue
+            m_up = missing.upper()
+            pref_up = prefix.upper()
+            if m_up.startswith(pref_up):
+                try:
+                    num = int(m_up.split('-')[-1])
+                    taken_numbers.add(num)
+                except Exception:
+                    continue
+    except Exception:
+        # If MISSING_COUPONS is malformed, ignore and continue
+        pass
 
     book_defs = BOOK_STRUCTURES[(group, gender)]
     books_meta = []
